@@ -1,0 +1,7 @@
+# Release image. GoReleaser builds the binary and copies it in; this file is
+# not meant for `docker build` on its own.
+FROM gcr.io/distroless/static-debian12:nonroot@sha256:afa5c872c891853ca7fcf1f12c3edb23f7eeef36189728842dd51042ff57f7ab
+ARG TARGETPLATFORM
+COPY ${TARGETPLATFORM}/sarifix /usr/local/bin/sarifix
+USER nonroot:nonroot
+ENTRYPOINT ["/usr/local/bin/sarifix"]
