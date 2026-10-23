@@ -104,6 +104,7 @@ nav:
   - Guides:
       - Fingerprints: guides/fingerprints.md
       - Modes: guides/modes.md
+      - Where SARIF files live: guides/sarif-files.md
   - Reference:
       - Config file: reference/config.md
       - Commands:

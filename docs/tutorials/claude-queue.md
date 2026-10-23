@@ -33,6 +33,7 @@ Copy two files from the sarifix repository into yours:
 
 How it fits together:
 
+- **Nothing is committed.** The SARIF files are written to the runner's temp directory, uploaded to code scanning and kept as an artifact. The issues are the durable record. See [Where SARIF files live](../guides/sarif-files.md).
 - **When it runs.** Weekly, on demand, and after every push to `main`. The push run is what closes an issue once its fix merges, and queues the next one.
 - **Scan output stays outside the checkout** (`$RUNNER_TEMP`). Otherwise a secrets scanner finds the secrets quoted in the other scanners' SARIF files.
 - **Code scanning** gets the per-scanner SARIF files. Alerts show in the Security tab and on pull request diffs, and they close by themselves when a later scan stops reporting them.
