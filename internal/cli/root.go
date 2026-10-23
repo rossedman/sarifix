@@ -32,12 +32,19 @@ const (
 	ExitRuntime     = 1
 	ExitConfig      = 2
 	ExitBatchFailed = 3
+	// ExitFindings is check's code for "your changes introduced findings".
+	// It shares 3 with ExitBatchFailed: both mean "the run worked, and
+	// there is something to fix".
+	ExitFindings = 3
 )
 
 // ExitError carries a specific exit code.
 type ExitError struct {
 	Code int
 	Err  error
+	// Silent means the command already reported the outcome itself, so
+	// nothing more is printed (sarifix check --hook writes its own stderr).
+	Silent bool
 }
 
 // Error returns the wrapped error's message.
@@ -88,14 +95,27 @@ func register(parent string, build func(*app) *cobra.Command) {
 
 // Execute builds the command tree and runs it with fang.
 func Execute(ctx context.Context, args []string, stdout, stderr io.Writer) error {
+	return ExecuteIO(ctx, args, os.Stdin, stdout, stderr)
+}
+
+// ExecuteIO is Execute with an explicit stdin, which sarifix check --hook
+// reads the hook payload from.
+func ExecuteIO(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.Writer) error {
 	root := NewRoot(stdout, stderr)
 	root.SetArgs(args)
+	root.SetIn(stdin)
 	info := version.Get()
 	return fang.Execute(ctx, root,
 		fang.WithVersion(info.Version),
 		fang.WithCommit(info.Commit),
 		fang.WithColorSchemeFunc(ui.ColorScheme),
-		fang.WithErrorHandler(ui.ErrorHandler),
+		fang.WithErrorHandler(func(w io.Writer, styles fang.Styles, err error) {
+			var ee *ExitError
+			if errors.As(err, &ee) && ee.Silent {
+				return
+			}
+			ui.ErrorHandler(w, styles, err)
+		}),
 		fang.WithNotifySignal(os.Interrupt),
 	)
 }

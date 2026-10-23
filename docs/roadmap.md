@@ -3,7 +3,7 @@
 sarifix is built in six phases. Each ends with a working, released binary and has to meet its done criteria before the next one starts.
 
 !!! success "Where we are"
-    Phases 0 and 1 are built: `config validate`, `scan`, `diff`, `plan`, `fix --mode report` and `version` run today. Everything after them is planned, and those commands and modes do not exist yet.
+    Phases 0 and 1 are built: `config validate`, `scan`, `diff`, `plan`, `fix --mode report` and `version` run today. So does `check`, which reports what a change introduced and runs as a [Claude Code hook](tutorials/claude-code-hook.md) so Claude fixes its own findings. The autonomous fixing modes are planned and do not exist yet.
 
 | Phase | Name | Status |
 | --- | --- | --- |
@@ -40,7 +40,9 @@ The GitHub forge layer, PR publishing, a JSONL state store, `action.yml` and exa
 
 ## Phase 4: Review mode and agent hook
 
-`--mode review` with baseline diff and suggested changes, and a documented Claude Code `PostToolUse` hook using `--mode local --baseline`.
+`--mode review` with baseline diff and suggested changes, and a documented Claude Code hook.
+
+The hook part shipped early, in a simpler form: [`sarifix check --hook`](tutorials/claude-code-hook.md) runs as a Stop hook and reports findings to Claude instead of having sarifix fix them. See [ADR 6](adr/0006-feedback-hook.md).
 
 **Done when** a PR that introduces two findings receives exactly two suggestions, pre-existing findings are ignored, and fork PRs get suggestions without write-token execution.
 

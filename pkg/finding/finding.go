@@ -51,7 +51,9 @@ type Finding struct {
 	Anchor      string `json:"-"`
 	Fingerprint string `json:"fingerprint"`
 	HelpText    string `json:"-"`
-	Source      string `json:"source"`
+	// HelpURI is the rule's documentation link (rules[].helpUri), if any.
+	HelpURI string `json:"-"`
+	Source  string `json:"source"`
 
 	Raw *sarif.Result `json:"-"`
 	// Run and ResultIndex locate Raw in its log, so sarifix can annotate it.
@@ -132,6 +134,9 @@ func (e *Extractor) ExtractRun(sr *sarif.SourcedRun) []Finding {
 		f.Level = level(res, rule)
 		f.Message = messageText(res, rule)
 		f.HelpText = helpText(rule)
+		if rule != nil {
+			f.HelpURI = strVal(rule.HelpURI)
+		}
 		e.locate(&f, run, res)
 		out = append(out, f)
 	}

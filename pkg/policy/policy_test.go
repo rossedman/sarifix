@@ -45,6 +45,8 @@ func TestApply(t *testing.T) {
 		{"none level", f("Trivy", "DS-1", "none", "Dockerfile", "a"), Options{}, ReasonBelowMinLevel, "none < warning", ""},
 		{"denied", f("Trivy", "secret-aws", "error", "a.env", "a"), Options{}, ReasonRuleDenied, "*/secret-*", ""},
 		{"not allowed", f("image-migrate", "OTHER", "error", "Dockerfile", "a"), Options{}, ReasonNotAllowed, "", ""},
+		{"allow ignored", f("image-migrate", "OTHER", "error", "Dockerfile", "a"), Options{IgnoreAllow: true}, "", "", ""},
+		{"deny still applies", f("Trivy", "secret-aws", "error", "a.env", "a"), Options{IgnoreAllow: true}, ReasonRuleDenied, "*/secret-*", ""},
 		{"campaign implies allow", f("image-migrate", "OLD_BASE", "warning", "Dockerfile", "a"), Options{}, "", "", "base-v4"},
 		{"workflow denied", f("Trivy", "DS-1", "error", ".github/workflows/ci.yml", "a"), Options{}, ReasonPathDenied, ".github/workflows/**", ""},
 		{"vendor denied", f("Trivy", "DS-1", "error", "vendor/x/Dockerfile", "a"), Options{}, ReasonPathDenied, "vendor/**", ""},

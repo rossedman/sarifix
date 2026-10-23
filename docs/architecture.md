@@ -32,6 +32,7 @@ Solid arrows follow the data; dotted ones are helper libraries.
 | `internal/cli` | Cobra commands, flags, viper settings, human and JSON output. One command per file. | `Execute`, `NewRoot` |
 | `internal/ui` | Every terminal style (lipgloss), the fang help theme, the `slog` handler, and `Sanitize` for untrusted text | `NewStyles`, `Sanitize`, `NewLogger` |
 | `internal/version` | Build information injected with `-ldflags` | `Get` |
+| `internal/gitrepo` | The few git commands `check` needs: repo root, git directory, resolving a revision, temporary worktrees | `Root`, `Resolve`, `AddWorktree` |
 | `pkg/config` | `sarifix.yaml`: schema, defaults, `--org-config` layering, validation with file:line errors | `LoadLayered`, `(*Loaded).Validate` |
 | `pkg/scanner` | Runs a configured scanner as a subprocess (no shell, own process group, timeout) and routes SARIF runs by tool name | `NewExec(...).Scan`, `(*Registry).Route` |
 | `pkg/sarif` | Loads SARIF 2.1.0, validates each run against the official schema, normalizes URIs to repo paths, writes runs back from their original JSON plus patches | `LoadGlobs`, `NewNormalizer`, `(*Log).Write` |
@@ -61,6 +62,14 @@ Solid arrows follow the data; dotted ones are helper libraries.
 2. `finding.Extractor.Extract` produces findings. Paths are normalized by `sarif.Normalizer`, which resolves `uriBaseId` chains, strips the repo root or a CI workspace root, and rejects anything outside the repo.
 3. `plan.Build` runs `policy.Apply`, then `group.Batches`, and records a status for every finding: `batched`, `deferred` or `skipped` with a reason.
 4. `plan` prints the result. `fix --mode report` calls `publish.Report`, which patches `properties.sarifix` into every finding's SARIF result and writes `summary.json`.
+
+### `sarifix check`
+
+1. Find the git root and load the config from it.
+2. Resolve `--base` (default `HEAD`). Look for its scan in `.git/sarifix/scans/<commit>-<config hash>/`; if it isn't there, check the commit out into a temporary worktree (`internal/gitrepo`), scan it, and cache the result.
+3. Scan the working tree into a temporary directory.
+4. `baseline.Compare` the two, leaving out any scanner that failed on either side. Then `policy.Apply` with `IgnoreAllow`, so `rules.allow` doesn't filter feedback.
+5. Print the new findings, or with `--hook`, answer Claude Code in JSON: `additionalContext` for Claude, `systemMessage` for the user. See [ADR 6](adr/0006-feedback-hook.md).
 
 ### `sarifix diff`
 
