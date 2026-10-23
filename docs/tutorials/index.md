@@ -1,6 +1,6 @@
 # Tutorials
 
-Six walk-throughs on real open-source repositories, each built around one job sarifix does. Every command was run for these pages, and every block of output is what it printed. Long output is trimmed where you see `...`.
+Walk-throughs on real open-source repositories, each built around one job sarifix does. Every command was run for these pages, and every block of output is what it printed. Long output is trimmed where you see `...`.
 
 - **[Triage an infrastructure backlog](iac-backlog.md)** on [terragoat](https://github.com/bridgecrewio/terragoat) (Terraform). Point two scanners at a repository, read a plan, and tune rules and limits until the work queue makes sense.
 - **[Check only what a pull request introduced](pull-requests.md)** on terragoat. Diff two scans, and use `--baseline` to keep pre-existing findings out of the way.
@@ -9,6 +9,7 @@ Six walk-throughs on real open-source repositories, each built around one job sa
 - **[Roll out a policy across repositories](org-policy.md)** on [microservices-demo](https://github.com/GoogleCloudPlatform/microservices-demo) (Kubernetes). Layer a platform default config under each repository's own, and keep generated files out of the queue.
 - **[Give Claude Code feedback on its changes](claude-code-hook.md)**, for any repository. Run `sarifix check --hook` as a Claude Code Stop hook, so Claude fixes the findings its changes introduced before it finishes.
 - **[Report on every pull request in GitHub Actions](github-actions.md)**, for any repository. Run the pull-request check in CI and publish a job summary.
+- **[Turn findings into issues Claude works through](claude-queue.md)**, for any GitHub repository. Scan the default branch, upload to code scanning, keep one agent-ready issue per batch, and let Claude fix them one pull request at a time.
 
 ## Before you start
 
