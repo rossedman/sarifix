@@ -37,7 +37,7 @@ That's the whole setup. Only rules listed in `rules.allow` become issues, and no
 | `queue` | (config) | Issues mode: how many issues to keep labeled `agent-ready`. Empty uses `publish.issues.queue`. Above 0, this starts paid agent runs |
 | `dry-run` | `false` | Issues mode: show the changes in the job summary without making them |
 | `fail-on-new` | `false` | Check mode: fail the step when the pull request introduces findings |
-| `version` | the action's tag | The sarifix release to install, such as `v0.3.0`. Without a tag (a branch or SHA reference), the latest release |
+| `version` | the action's tag | The sarifix release to install, such as `v0.2.3`. Without a tag (a branch or SHA reference), the latest release |
 | `install` | `true` | Set `false` to use a sarifix already on `PATH` |
 | `token` | `github.token` | Token for the code scanning upload and the issues |
 

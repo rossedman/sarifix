@@ -37,6 +37,6 @@ jobs:
       # issues agent-ready, which starts paid agent runs; leave it unset to
       # queue issues by hand.
       # A tag reads better in an example; pin the tag's commit SHA in your repo.
-      - uses: rossedman/sarifix@v0.3.0 # zizmor: ignore[unpinned-uses]
+      - uses: rossedman/sarifix@v0.2.3 # zizmor: ignore[unpinned-uses]
         with:
           queue: ${{ vars.SARIFIX_QUEUE }}
