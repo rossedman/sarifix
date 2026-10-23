@@ -1,0 +1,69 @@
+# sarifix.yaml: a complete example. Every key is shown; most have defaults.
+version: 1
+
+scanners:
+  - name: trivy
+    match: ["Trivy"] # tool.driver.name values; default [name]
+    command: ["trivy", "config", "--format", "sarif", "-o", "{out}", "{dir}"]
+    timeout: 5m
+    offline: true # verify must work without network
+
+  - name: checkov
+    match: ["Checkov"]
+    command: ["checkov", "-d", "{dir}", "-o", "sarif", "--output-file-path", "{outdir}"]
+    output: "{outdir}/results_sarif.sarif"
+
+  - name: golangci-lint
+    command: ["golangci-lint", "run", "--output.sarif.path={out}", "./..."]
+    workdir: "{dir}"
+    scope: dir
+
+  - name: image-migrate
+    command: ["./tools/image-migrate.sh", "{dir}", "{out}"]
+    env: { CT_MODE: "ci" }
+    scope: changed
+
+rules:
+  allow: # globs on "<scanner>/<ruleId>"
+    - trivy/DS-0002
+    - checkov/CKV_AWS_*
+    - golangci-lint/errcheck
+    - image-migrate/*
+  deny: ["*/secrets-*"]
+  min_level: warning
+
+paths:
+  deny: [".github/workflows/**", "vendor/**", "**/*_generated.go"]
+
+campaigns:
+  - id: base-image-2026q4
+    scanner: image-migrate
+    rules: ["image-migrate/DEPRECATED_BASE"]
+    pr_title: "chore: migrate to platform base image v4"
+    labels: [migration, platform]
+
+limits:
+  files_per_batch: 10
+  findings_per_batch: 25
+  batches_per_run: 5
+  retries: 2
+  max_diff_lines: 400
+  agent_timeout: 10m
+
+verify:
+  commands: [["make", "test"]]
+  require_no_new_findings: true
+
+agent:
+  provider: claude-code
+  model: "" # empty = provider default
+  extra_instructions: docs/sarifix-agent.md
+
+publish:
+  pr:
+    branch_prefix: sarifix
+    draft: false
+    labels: [sarifix]
+    reviewers_from: codeowners
+  review:
+    max_suggestions: 20
