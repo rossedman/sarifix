@@ -1,0 +1,218 @@
+{#- The landing page. Everything renders in the tabs block, outside Material's
+    content grid, so sections can run edge to edge. Styles: docs/assets/site/landing.css -#}
+{% extends "main.html" %}
+
+{% set gh = "https://github.com/rossedman/sarifix" %}
+{% set install = "go install github.com/rossedman/sarifix/cmd/sarifix@latest" %}
+
+{% block tabs %}
+{{ super() }}
+<div class="lp">
+
+  <section class="lp-hero">
+    <div class="lp-grid" aria-hidden="true"></div>
+    <div class="lp-wrap lp-hero__inner">
+      <div>
+        <img class="lp-hero__logo" src="{{ 'assets/site/logo.svg' | url }}" alt="">
+        <p class="lp-kicker">rossedman/sarifix</p>
+        <h1 class="lp-title">Any SARIF scanner,<br><span>a verified fixer.</span></h1>
+        <p class="lp-tagline">Point sarifix at Trivy, Checkov, golangci-lint or your own tool with one config file. It tracks every finding by a stable fingerprint, <b>and will only ship a fix a rescan proves.</b></p>
+        <div class="lp-install">
+          <span class="lp-install__prompt">$</span>
+          <code>{{ install }}</code>
+          <button class="lp-copy" data-copy="{{ install }}" aria-label="Copy install command">
+            {% include ".icons/material/content-copy.svg" %}
+          </button>
+        </div>
+        <div class="lp-cta">
+          <a class="lp-btn lp-btn--primary" href="{{ 'getting-started/' | url }}">Get started {% include ".icons/material/arrow-right.svg" %}</a>
+          <a class="lp-btn" href="{{ 'roadmap/' | url }}">{% include ".icons/material/map-marker-path.svg" %} Roadmap</a>
+        </div>
+      </div>
+
+      <div class="lp-term" aria-label="A terminal running sarifix scan and sarifix diff">
+        <div class="lp-term__bar"><i></i><i></i><i></i><span>/app</span></div>
+        <div class="lp-term__body" data-typing>
+          <div><span class="p">$</span> <span class="c" data-type>sarifix scan --log-level warn</span></div>
+          <div><span class="ok">✓</span> <span class="c">trivy</span> <span class="w">14</span> findings <span class="d">→ sarif/trivy.sarif</span></div>
+          <div><span class="ok">✓</span> <span class="c">checkov</span> <span class="w">12</span> findings <span class="d">→ sarif/checkov.sarif</span></div>
+          <div><span class="ok">✓</span> <span class="c">golangci-lint</span> <span class="w">1</span> finding <span class="d">→ sarif/golangci-lint.sarif</span></div>
+          <div><span class="ok">✓</span> <span class="c">image-migrate</span> <span class="w">1</span> finding <span class="d">→ sarif/image-migrate.sarif</span></div>
+          <div><span class="p">$</span> <span class="c" data-type>sarifix diff --base 'base/*.sarif' --head 'head/*.sarif' \</span></div>
+          <div><span class="c">    --base-root /basic</span></div>
+          <div><span class="w">2 new</span>  <span class="ok">2 fixed</span>  <span class="c">26 unchanged</span><span class="lp-caret"></span></div>
+        </div>
+      </div>
+    </div>
+
+    <ul class="lp-wrap lp-stats">
+      <li><b>4</b><span>SARIF producers verified, one hand-written</span></li>
+      <li><b>26 of 28</b><span>findings still matched after the lines shifted</span></li>
+      <li><b>28</b><span>load-time checks on sarifix.yaml</span></li>
+      <li><b>4 of 8</b><span>commands shipped, the rest on the roadmap</span></li>
+    </ul>
+  </section>
+
+  <section class="lp-section" id="problem">
+    <div class="lp-wrap lp-split">
+      <div>
+        <p class="lp-eyebrow">The problem</p>
+        <h2>Scanners find it.<br><span>Nobody closes the loop.</span></h2>
+        <p class="lp-lede">A scanner reports hundreds of findings, and the numbers only grow. Matching today's report to last week's breaks as soon as someone adds a line above a finding. sarifix gives every finding an identity that survives edits, so you can say what is new, what is fixed and what is unchanged.</p>
+        <ul class="lp-points">
+          <li>{% include ".icons/material/check-decagram-outline.svg" %} Works with any tool that writes SARIF 2.1.0</li>
+          <li>{% include ".icons/material/check-decagram-outline.svg" %} Fingerprints ignore line numbers</li>
+          <li>{% include ".icons/material/check-decagram-outline.svg" %} Config errors name the file, the key path and the line</li>
+        </ul>
+      </div>
+      <div class="lp-stack">
+        <article class="lp-panel" aria-label="A finding that moved from line 5 to line 7">
+          <div class="lp-panel__head">
+            <span class="lp-panel__id">Checkov/CKV_AWS_24</span><span class="lp-pill lp-pill--warn">finding</span>
+            <span class="lp-panel__meta">main.tf</span>
+          </div>
+          <h3>Ensure no security groups allow ingress from 0.0.0.0:0 to port 22</h3>
+          <div class="lp-panel__sub">Reported at line 5. Two comment lines were added above it, so it now sits at line 7.</div>
+          <div class="lp-quote lp-quote--ok">Same finding, same fingerprint: unchanged<small>sarifix diff --unchanged, line 7 in the head scan</small></div>
+          <div class="lp-well"><code style="white-space: normal">= Checkov/CKV_AWS_24 main.tf:7 Ensure no security groups allow ingress from 0.0.0.0:0 to port 22</code></div>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section class="lp-section lp-section--alt">
+    <div class="lp-wrap">
+      <p class="lp-eyebrow">Core ideas</p>
+      <h2>Three things you<br><span>configure once.</span></h2>
+      <p class="lp-lede lp-lede--center">Scanners are entries in a YAML file. Identity comes from fingerprints. Trust comes from verification, which arrives with the fixing phases.</p>
+      <div class="lp-pillars">
+        <article class="lp-pillar" style="--accent: var(--brand)">
+          <h3>Scanners</h3><div class="when">Shipped</div>
+          <p>A name, the SARIF tool names to match, and a command. No code change to add a tool.</p>
+          <pre><code>- name: checkov
+  match: ["Checkov"]
+  command: ["checkov", "-d", "{dir}",
+    "-o", "sarif",
+    "--output-file-path", "{outdir}"]</code></pre>
+        </article>
+        <article class="lp-pillar" style="--accent: var(--info)">
+          <h3>Fingerprints</h3><div class="when">Shipped</div>
+          <p>The tool's own hash if it has one, otherwise a hash of tool, rule, path and the flagged code.</p>
+          <pre><code>partialFingerprints:
+  sarifix/v1: fcadca11a498b6d6…
+
+line numbers never count</code></pre>
+        </article>
+        <article class="lp-pillar" style="--accent: var(--warn)">
+          <h3>Verification</h3><div class="when">Planned, phase 2</div>
+          <p>A fix ships only if the rescan shows the finding gone, nothing new, and your tests pass.</p>
+          <pre><code>verify:
+  commands: [["make", "test"]]
+  require_no_new_findings: true</code></pre>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section class="lp-section">
+    <div class="lp-wrap">
+      <p class="lp-eyebrow">Why sarifix</p>
+      <h2>Built to be trusted<br><span>with your repos.</span></h2>
+      <div class="lp-features">
+        {% for icon, title, body in [
+          ("puzzle-outline", "Scanner-agnostic", "Four SARIF producers are tested in the fixture, one of them a 25-line shell script. A new tool is one scanners entry."),
+          ("fingerprint", "Stable identity", "Line numbers never count. Move a finding down two lines and it still matches. Whole-file findings are the documented exception."),
+          ("file-alert-outline", "Errors you can act on", "28 load-time checks. Each error names the file, the key path and the line. Exit code 2 means a config error."),
+          ("shield-lock-outline", "Workflows are off limits", ".github/workflows/** is always in paths.deny, however you layer your config."),
+          ("check-decagram-outline", "Verified or not shipped", "Planned: no change is published unless a rescan and your own tests pass. Nothing is ever auto-merged."),
+          ("layers-outline", "Layered config", "Put org defaults under a repo file with --org-config. Scanners and campaigns merge by name; the repo wins."),
+        ] %}
+        <article class="lp-card">
+          <div class="lp-icon">{% include ".icons/material/" ~ icon ~ ".svg" %}</div>
+          <h3>{{ title }}</h3>
+          <p>{{ body }}</p>
+        </article>
+        {% endfor %}
+      </div>
+    </div>
+  </section>
+
+  <section class="lp-section lp-section--alt" id="quick-start">
+    <div class="lp-wrap lp-split">
+      <div>
+        <p class="lp-eyebrow">Quick start</p>
+        <h2>From zero to a scan<br><span>in 3 commands.</span></h2>
+        <p class="lp-lede">You need Go 1.27 or newer, and whichever scanners your config calls on your PATH. Release binaries are signed with cosign if you prefer those.</p>
+        <a class="lp-btn" href="{{ 'getting-started/' | url }}">{% include ".icons/material/book-open-page-variant-outline.svg" %} Full getting-started guide</a>
+      </div>
+      <ol class="lp-steps">
+        <li>
+          <h4>Install</h4>
+          <pre class="lp-code"><button class="lp-copy" aria-label="Copy">{% include ".icons/material/content-copy.svg" %}</button><code><span class="p">$</span> {{ install }}</code></pre>
+        </li>
+        <li>
+          <h4>Check your config</h4>
+          <p>Start from the example in the repo and validate it.</p>
+          <pre class="lp-code"><button class="lp-copy" aria-label="Copy">{% include ".icons/material/content-copy.svg" %}</button><code><span class="p">$</span> sarifix config validate --config examples/sarifix.yaml</code></pre>
+        </li>
+        <li>
+          <h4>Scan</h4>
+          <p>One SARIF file per scanner, each result fingerprinted.</p>
+          <pre class="lp-code"><button class="lp-copy" aria-label="Copy">{% include ".icons/material/content-copy.svg" %}</button><code><span class="p">$</span> sarifix scan</code></pre>
+        </li>
+      </ol>
+    </div>
+  </section>
+
+  <section class="lp-section">
+    <div class="lp-wrap">
+      <p class="lp-eyebrow">How it works</p>
+      <h2>One pipeline.<br><span>Three stages ship today.</span></h2>
+      <p class="lp-lede lp-lede--center">Phase 0 covers ingest, fingerprinting and the baseline diff. Filtering, grouping, the agent, verification and publishing follow in phases 1 to 4.</p>
+      <figure class="lp-figure">
+        <a href="{{ 'assets/how-it-works.png' | url }}"><img width="2560" height="1280" src="{{ 'assets/how-it-works.png' | url }}" alt="The sarifix pipeline in eight stages: ingest, fingerprint and baseline ship today in phase 0; filter and group are phase 1; fix and verify are phase 2; publish is phases 3 and 4." loading="lazy"></a>
+        <figcaption>Tap to open the full-size diagram</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section class="lp-section lp-section--alt">
+    <div class="lp-wrap">
+      <p class="lp-eyebrow">Documentation</p>
+      <h2>Go deeper.</h2>
+      <div class="lp-docs">
+        {% for path, name, blurb in [
+          ("getting-started/", "Getting started", "Install, first config, scan and diff"),
+          ("configuration/", "Configuration", "Scanners, placeholders, globs, layering"),
+          ("guides/fingerprints/", "Fingerprints", "How findings keep their identity"),
+          ("guides/modes/", "Modes", "pr, review, local and report"),
+          ("reference/config/", "Config reference", "Every field and default"),
+          ("reference/commands/sarifix/", "Commands", "Flags and examples"),
+          ("security/", "Security", "Threat model and controls"),
+          ("roadmap/", "Roadmap", "Six phases and their done criteria"),
+        ] %}
+        <a class="lp-doc" href="{{ path | url }}">
+          <b>{{ name }}</b><span>{{ blurb }}</span>
+          {% include ".icons/material/arrow-right.svg" %}
+        </a>
+        {% endfor %}
+      </div>
+    </div>
+  </section>
+
+  <section class="lp-final">
+    <div class="lp-grid" aria-hidden="true"></div>
+    <div class="lp-wrap">
+      <img class="lp-final__logo" src="{{ 'assets/site/logo.svg' | url }}" alt="">
+      <h2>Scan your repo<br><span>with sarifix.</span></h2>
+      <p class="lp-lede lp-lede--center">Free and open source under the MIT license.</p>
+      <div class="lp-cta lp-cta--center">
+        <a class="lp-btn lp-btn--primary" href="{{ 'getting-started/' | url }}">Get started {% include ".icons/material/arrow-right.svg" %}</a>
+        <a class="lp-btn" href="{{ gh }}">{% include ".icons/material/source-repository.svg" %} View on GitHub</a>
+      </div>
+    </div>
+  </section>
+</div>
+{% endblock %}
+
+{% block content %}{% endblock %}

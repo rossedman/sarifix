@@ -1,0 +1,59 @@
+name: Bug report
+description: Something in sarifix doesn't work as documented.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report. Please don't include secrets or private SARIF content; trim findings to the smallest example that shows the problem.
+        Security issues go through [private vulnerability reporting](https://github.com/rossedman/sarifix/security/advisories/new) instead.
+  - type: input
+    id: version
+    attributes:
+      label: sarifix version
+      description: Output of `sarifix version`.
+      placeholder: v0.1.0, commit abc1234
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      description: OS, architecture, and where it ran (laptop, GitHub Actions, container).
+      placeholder: Ubuntu 24.04 amd64 on GitHub Actions
+    validations:
+      required: true
+  - type: textarea
+    id: scanners
+    attributes:
+      label: Scanners and config
+      description: Which scanners produced the SARIF (with versions) and the relevant part of sarifix.yaml.
+      render: yaml
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: The exact commands you ran.
+      placeholder: |
+        sarifix scan --out-dir base
+        sarifix diff --base 'base/*.sarif' --head 'head/*.sarif'
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: Output with `--log-level debug`. This is rendered as code, so no backticks are needed.
+      render: shell

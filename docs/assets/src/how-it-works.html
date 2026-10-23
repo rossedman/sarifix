@@ -1,0 +1,63 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="brand.css">
+<style>
+  html, body { width: 1280px; height: 640px; }
+  body {
+    background:
+      radial-gradient(800px 380px at 10% 0%, rgba(61,245,181,0.10), transparent 70%),
+      radial-gradient(700px 360px at 100% 100%, rgba(255,181,71,0.07), transparent 70%),
+      var(--ink-2);
+  }
+  .grid { mask-image: radial-gradient(ellipse 80% 80% at 50% 50%, #000 10%, transparent 80%); }
+  .wrap { position: absolute; inset: 0; padding: 40px 48px 36px; }
+  .head { display: flex; align-items: baseline; justify-content: space-between; }
+  .head h2 { font-size: 26px; font-weight: 800; letter-spacing: -0.8px; }
+  .head h2 span { color: var(--brand); }
+  .legend { display: flex; gap: 22px; font-size: 15px; color: var(--mist); }
+  .legend i { display: inline-block; width: 12px; height: 12px; border-radius: 4px; margin-right: 8px; vertical-align: -1px; }
+  .legend .ls i { background: var(--brand); }
+  .legend .lp i { border: 2px dashed var(--dim); }
+  .row { position: absolute; left: 48px; right: 48px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 44px; }
+  .r1 { top: 112px; } .r2 { top: 372px; }
+  .card { height: 200px; border-radius: 16px; padding: 22px 22px 0; background: var(--ink-4); border: 1px solid var(--ink-3); box-shadow: 0 18px 40px rgba(0,0,0,0.4); position: relative; }
+  .card .n { font-family: "JetBrains Mono", monospace; font-size: 14px; color: var(--dim); }
+  .card h3 { margin-top: 6px; font-size: 27px; font-weight: 800; letter-spacing: -0.8px; color: var(--cream); }
+  .card p { margin-top: 10px; font-size: 16px; line-height: 1.45; color: var(--mist); }
+  .chip { position: absolute; right: 18px; top: 18px; font-size: 12px; font-weight: 700; letter-spacing: 1.4px; text-transform: uppercase; padding: 4px 10px; border-radius: 99px; }
+  .ship { border-color: color-mix(in srgb, var(--brand) 55%, var(--ink-3)); box-shadow: 0 18px 40px rgba(0,0,0,0.4), 0 0 40px rgba(61,245,181,0.10); }
+  .ship .chip { color: var(--ink); background: var(--brand); }
+  .plan { border-style: dashed; border-color: var(--dim); background: color-mix(in srgb, var(--ink-4) 70%, transparent); box-shadow: none; }
+  .plan .chip { color: var(--warn); background: color-mix(in srgb, var(--warn) 13%, transparent); }
+  .plan h3 { color: var(--mist); }
+  .mono { font-family: "JetBrains Mono", monospace; }
+  svg.ar { position: absolute; inset: 0; width: 1280px; height: 640px; pointer-events: none; }
+</style></head>
+<body>
+<div class="grid"></div>
+<svg class="ar" viewBox="0 0 1280 640" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M1 1 L8 5 L1 9" fill="none" stroke="#8aa39a" stroke-width="2"/></marker>
+  </defs>
+  <g stroke="#8aa39a" marker-end="url(#a)">
+    <path d="M317 212 H349"/><path d="M624 212 H656"/><path d="M931 212 H963"/>
+    <path d="M317 472 H349"/><path d="M624 472 H656"/><path d="M931 472 H963"/>
+  </g>
+  <path d="M1100 316 V342 H180 V368" stroke="#8aa39a" marker-end="url(#a)"/>
+</svg>
+<div class="wrap">
+  <div class="head"><h2>Eight stages, <span>one binary.</span></h2>
+    <div class="legend"><span class="ls"><i></i>Ships today</span><span class="lp"><i></i>On the roadmap</span></div></div>
+  <div class="row r1">
+    <div class="card ship"><span class="chip">Phase 0</span><div class="n">01</div><h3>Ingest</h3><p>Load SARIF 2.1.0, validate, route each run to a scanner by <span class="mono">match</span>.</p></div>
+    <div class="card ship"><span class="chip">Phase 0</span><div class="n">02</div><h3>Fingerprint</h3><p>A stable ID per finding. Line numbers never count.</p></div>
+    <div class="card ship"><span class="chip">Phase 0</span><div class="n">03</div><h3>Baseline</h3><p>Keep only findings absent from a base scan. <span class="mono">sarifix diff</span> does this today.</p></div>
+    <div class="card plan"><span class="chip">Phase 1</span><div class="n">04</div><h3>Filter</h3><p>Apply rule allow and deny globs, level floor and denied paths.</p></div>
+  </div>
+  <div class="row r2">
+    <div class="card plan"><span class="chip">Phase 1</span><div class="n">05</div><h3>Group</h3><p>One batch per rule, split by file and finding caps.</p></div>
+    <div class="card plan"><span class="chip">Phase 2</span><div class="n">06</div><h3>Fix</h3><p>An agent edits a clean worktree. Findings are quoted data.</p></div>
+    <div class="card plan"><span class="chip">Phase 2</span><div class="n">07</div><h3>Verify</h3><p>Diff guard, rescan, targets gone, nothing new, tests pass.</p></div>
+    <div class="card plan"><span class="chip">Phase 3-4</span><div class="n">08</div><h3>Publish</h3><p>A PR, review suggestions, local edits or a report.</p></div>
+  </div>
+</div>
+</body></html>

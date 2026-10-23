@@ -1,0 +1,89 @@
+name: docs
+
+# Builds the docs site with --strict on every change to it, and deploys it to GitHub Pages
+# from main and on releases. Pull requests only build.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "docs/**"
+      - "overrides/**"
+      - "mkdocs.yml"
+      - "requirements-docs.txt"
+      - "CONTRIBUTING.md"
+      - "Makefile"
+      - "SECURITY.md"
+      - "internal/cli/**"
+      - "pkg/config/**"
+      - "tools/gendocs/**"
+      - ".github/workflows/docs.yml"
+  pull_request:
+    paths:
+      - "docs/**"
+      - "overrides/**"
+      - "mkdocs.yml"
+      - "requirements-docs.txt"
+      - "CONTRIBUTING.md"
+      - "Makefile"
+      - "SECURITY.md"
+      - "internal/cli/**"
+      - "pkg/config/**"
+      - "tools/gendocs/**"
+      - ".github/workflows/docs.yml"
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  build:
+    name: docs build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      # No caches: this job's output is published.
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+          cache: false
+      - uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
+        with:
+          enable-cache: false
+      # make docs-build runs tools/gendocs first, so the command and config
+      # reference pages are generated from this commit.
+      - name: Build (strict)
+        run: make docs-build
+      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: site
+
+  deploy:
+    needs: build
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    concurrency:
+      group: pages
+      cancel-in-progress: false
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
+      - id: deployment
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1

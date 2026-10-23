@@ -1,0 +1,30 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="brand.css">
+<style>
+  body {
+    background:
+      radial-gradient(760px 420px at 50% 34%, rgba(61,245,181,0.17), transparent 70%),
+      radial-gradient(600px 360px at 92% 112%, rgba(255,181,71,0.10), transparent 70%),
+      var(--ink);
+  }
+  .grid { mask-image: radial-gradient(ellipse 70% 70% at 50% 40%, #000 20%, transparent 75%); }
+  .wrap { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 64px; }
+  .logo { width: 150px; height: 150px; filter: drop-shadow(0 18px 30px rgba(0,0,0,0.5)); }
+  .kicker { margin-top: 26px; font-size: 22px; color: var(--dim); }
+  h1 { margin-top: 10px; font-size: 76px; font-weight: 800; letter-spacing: -3px; line-height: 1.02; }
+  h1 span { color: var(--brand); }
+  p { margin-top: 22px; font-size: 26px; color: var(--mist); }
+  p b { color: var(--cream); font-weight: 600; }
+  .bar { position: absolute; left: 0; right: 0; bottom: 0; height: 10px; background: linear-gradient(90deg, var(--brand-2), var(--brand), var(--warn)); }
+  html, body { width: 1280px; height: 640px; }
+</style></head>
+<body>
+  <div class="grid"></div>
+  <div class="wrap">
+    <img class="logo" src="../site/logo.svg" alt="">
+    <div class="kicker mono">rossedman/sarifix</div>
+    <h1>Any SARIF scanner,<br><span>a verified fixer.</span></h1>
+    <p>Findings in. <b>Fixes proven by a rescan</b> out.</p>
+  </div>
+  <div class="bar"></div>
+</body></html>

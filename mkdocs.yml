@@ -1,0 +1,120 @@
+# The docs site: the landing page (overrides/home.html) and every page in docs/.
+# Published to GitHub Pages by .github/workflows/docs.yml.
+# Preview locally: make docs-serve
+site_name: sarifix
+site_description: Turn any SARIF scanner into a verified fixer.
+site_url: https://rossedman.io/sarifix/
+repo_url: https://github.com/rossedman/sarifix
+repo_name: rossedman/sarifix
+edit_uri: edit/main/docs/
+
+# Graphic sources and their render script are not pages.
+exclude_docs: |
+  /assets/src/
+  /assets/render.sh
+
+theme:
+  name: material
+  custom_dir: overrides
+  logo: assets/site/logo.svg
+  favicon: assets/site/favicon.svg
+  palette:
+    scheme: slate
+  font:
+    text: Inter
+    code: JetBrains Mono
+  icon:
+    repo: fontawesome/brands/github
+    edit: material/pencil-outline
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - navigation.tabs
+    - navigation.sections
+    - navigation.top
+    - navigation.footer
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - content.action.edit
+    - toc.follow
+
+extra_css:
+  - assets/site/landing.css
+  - assets/site/docs.css
+extra_javascript:
+  - assets/site/landing.js
+  - assets/site/docs.js
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.details
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets:
+      # Fail the build when an included root file is missing.
+      check_paths: true
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+
+plugins:
+  - search
+
+# Strict builds fail on broken links and #anchors between pages.
+validation:
+  nav:
+    omitted_files: warn
+    not_found: warn
+    absolute_links: warn
+  links:
+    not_found: warn
+    anchors: warn
+    absolute_links: warn
+    unrecognized_links: warn
+
+nav:
+  - Home: index.md
+  - Get started:
+      - Getting started: getting-started.md
+      - Configuration: configuration.md
+  - Guides:
+      - Fingerprints: guides/fingerprints.md
+      - Modes: guides/modes.md
+  - Reference:
+      - Config file: reference/config.md
+      - Commands:
+          - sarifix: reference/commands/sarifix.md
+          - sarifix scan: reference/commands/sarifix_scan.md
+          - sarifix diff: reference/commands/sarifix_diff.md
+          - sarifix config: reference/commands/sarifix_config.md
+          - sarifix config validate: reference/commands/sarifix_config_validate.md
+          - sarifix version: reference/commands/sarifix_version.md
+  - Project:
+      - Roadmap: roadmap.md
+      - Security: security.md
+      - Contributing: contributing.md
+      - Decisions:
+          - Layout and CLI wiring: adr/0001-layout-and-cli-wiring.md
+          - Dependencies and SARIF I/O: adr/0002-dependencies-and-sarif-io.md
+          - Fingerprint details: adr/0003-fingerprints.md
+          - Config semantics: adr/0004-config-semantics.md
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/rossedman/sarifix
+  generator: false
