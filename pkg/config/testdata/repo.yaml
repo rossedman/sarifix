@@ -1,0 +1,10 @@
+version: 1
+scanners:
+  - name: trivy
+    match: ["Trivy"]
+    command: ["trivy", "fs", "--format", "sarif", "-o", "{out}", "{dir}"]
+    timeout: 2m
+  - name: golangci-lint
+    command: ["golangci-lint", "run", "--output.sarif.path={out}", "./..."]
+rules:
+  allow: ["golangci-lint/errcheck"]

@@ -1,0 +1,12 @@
+version: 1
+scanners:
+  - name: trivy
+    match: ["Trivy"]
+    command: ["trivy", "config", "--format", "sarif", "-o", "{out}", "{dir}"]
+  - name: checkov
+    command: ["checkov", "-d", "{dir}", "-o", "sarif", "--output-file-path", "{outdir}"]
+    output: "{outdir}/results_sarif.sarif"
+rules:
+  allow: ["trivy/*"]
+limits:
+  retries: 1

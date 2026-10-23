@@ -1,0 +1,11 @@
+{
+  "version": "2.1.0",
+  "runs": [
+    {"tool": {"driver": {"name": "good-tool", "rules": [{"id": "R1"}]}}, "results": [
+      {"ruleId": "R1", "message": {"text": "kept"}, "locations": [{"physicalLocation": {"artifactLocation": {"uri": "a.txt"}, "region": {"startLine": 1}}}]}
+    ]},
+    {"results": []},
+    {"tool": {"driver": {"name": "bad-level"}}, "results": [{"ruleId": "X", "level": "critical", "message": {"text": "bad"}}]},
+    {"tool": {"driver": {}}, "results": []}
+  ]
+}

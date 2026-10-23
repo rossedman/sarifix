@@ -1,0 +1,6 @@
+* text=auto eol=lf
+*.png binary
+*.woff2 binary
+*.sarif linguist-language=JSON
+testdata/** linguist-vendored=true
+pkg/sarif/sarif-schema-2.1.0.json linguist-vendored=true

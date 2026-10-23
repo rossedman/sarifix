@@ -1,0 +1,26 @@
+{
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {"driver": {"name": "edge", "rules": [
+        {"id": "R0", "defaultConfiguration": {"level": "note"}, "shortDescription": {"text": "rule zero"}, "fullDescription": {"text": "full zero"}},
+        {"id": "R1", "help": {"text": "help one", "markdown": "**help one**"}}
+      ]}},
+      "originalUriBaseIds": {
+        "ROOT": {"uri": "file:///home/runner/work/sarifix/sarifix/"},
+        "SRC": {"uri": "src/", "uriBaseId": "ROOT"},
+        "LOOP": {"uri": "x/", "uriBaseId": "LOOP"}
+      },
+      "results": [
+        {"ruleId": "R1", "ruleIndex": 1, "message": {"text": "dup"}, "locations": [{"physicalLocation": {"artifactLocation": {"uri": "a.go", "uriBaseId": "SRC"}, "region": {"startLine": 2, "snippet": {"text": "  same   line  "}}}}]},
+        {"ruleId": "R1", "message": {"text": "dup"}, "locations": [{"physicalLocation": {"artifactLocation": {"uri": "a.go", "uriBaseId": "SRC"}, "region": {"startLine": 9, "snippet": {"text": "same line"}}}}]},
+        {"ruleId": "R0", "message": {"text": "", "markdown": "md only"}, "locations": [{"physicalLocation": {"artifactLocation": {"uri": "file:///home/runner/work/sarifix/sarifix/b%20c.tf"}}}]},
+        {"ruleId": "R0", "kind": "pass", "message": {"text": "passing"}},
+        {"ruleId": "R0", "message": {"text": ""}},
+        {"ruleId": "R1", "level": "error", "message": {"text": "gh"}, "partialFingerprints": {"primaryLocationLineHash": "abc123:1"}, "locations": [{"physicalLocation": {"artifactLocation": {"uri": "../escape.go"}}}]},
+        {"ruleId": "R1", "message": {"text": "tool fp"}, "partialFingerprints": {"toolKey": "v1"}, "locations": [{"physicalLocation": {"artifactLocation": {"uri": "https://example.com/x.go"}}}, {"physicalLocation": {"artifactLocation": {"uri": "c.go", "uriBaseId": "LOOP"}}}]},
+        {"rule": {"id": "R9"}, "message": {"text": "by rule ref"}}
+      ]
+    }
+  ]
+}
