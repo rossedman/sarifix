@@ -100,9 +100,11 @@ nav:
       - Roll out a policy across repositories: tutorials/org-policy.md
       - Report on pull requests in GitHub Actions: tutorials/github-actions.md
       - Give Claude Code feedback on its changes: tutorials/claude-code-hook.md
+      - Turn findings into issues Claude works through: tutorials/claude-queue.md
   - Guides:
       - Fingerprints: guides/fingerprints.md
       - Modes: guides/modes.md
+      - Where SARIF files live: guides/sarif-files.md
   - Reference:
       - Config file: reference/config.md
       - Commands:

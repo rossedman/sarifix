@@ -1,0 +1,84 @@
+# Scans the default branch, uploads the findings to GitHub code scanning, and
+# keeps one issue per sarifix batch in the agent-ready format, so an agent
+# queue (the task-queue plugin's agent-queue.yml) can work through them.
+# Runs weekly, after every push to main (so merged fixes close their issues
+# and the next batch is queued), and on demand.
+name: sarifix-issues
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "23 6 * * 1" # Mondays
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: sarifix-issues
+  cancel-in-progress: false
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      actions: read # upload-sarif reads the run's metadata on private repos
+      security-events: write # upload-sarif
+      issues: write # create, update and close the batch issues
+    env:
+      SARIFIX_VERSION: v0.2.0
+      CHECKOV_VERSION: "3.3.30"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: stable
+          cache: false
+
+      - uses: aquasecurity/setup-trivy@81e514348e19b6112ce2a7e3ecbafe19c1e1f567 # v0.3.1
+        with:
+          version: v0.76.1 # bump on purpose: new rules arrive as new issues
+
+      - name: Install sarifix and checkov
+        run: |
+          go install "github.com/rossedman/sarifix/cmd/sarifix@${SARIFIX_VERSION}"
+          pipx install "checkov==${CHECKOV_VERSION}"
+
+      # Scan output goes outside the checkout, so no scanner scans it.
+      - name: Scan
+        run: sarifix scan --out-dir "${RUNNER_TEMP}/sarif" --log-level warn
+
+      - name: Upload to code scanning
+        uses: github/codeql-action/upload-sarif@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
+        with:
+          sarif_file: ${{ runner.temp }}/sarif
+          category: sarifix
+
+      - name: Plan batches
+        run: |
+          sarifix fix --mode report --sarif "${RUNNER_TEMP}/sarif/*.sarif" \
+            --out-dir "${RUNNER_TEMP}/report" --log-level warn
+
+      - name: Sync issues
+        env:
+          GH_TOKEN: ${{ github.token }}
+          # Repository variables. SARIFIX_QUEUE above 0 labels that many issues
+          # agent-ready, which starts paid agent runs; leave it unset to queue
+          # issues by hand.
+          MAX_OPEN: ${{ vars.SARIFIX_MAX_OPEN || '10' }}
+          QUEUE: ${{ vars.SARIFIX_QUEUE || '0' }}
+        run: |
+          gh label create sarifix --color 5319e7 --description "Found by the sarifix scan" --force
+          gh label create agent-ready --color 0e8a16 --description "Ready for Claude to implement" 2>/dev/null || true
+          python3 .github/scripts/sarifix_issues.py --report-dir "${RUNNER_TEMP}/report" \
+            --max-open "${MAX_OPEN}" --queue "${QUEUE}"
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: sarifix-report
+          path: ${{ runner.temp }}/report/

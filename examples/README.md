@@ -6,7 +6,7 @@ Files to copy from when setting up sarifix. Each one is exercised by the test su
 | --- | --- |
 | [`sarifix.yaml`](sarifix.yaml) | A complete config that shows every key: four scanners, rule and path policy, a campaign, limits, verify, agent and publish settings. Start here and delete what you don't need. |
 | [`eol-images/`](eol-images/) | A small in-house scanner in Python that flags end-of-life Docker base images. It shows that any program writing SARIF plugs into sarifix. |
-| [`workflows/`](workflows/) | A GitHub Actions workflow that reports what each pull request introduced. |
+| [`workflows/`](workflows/) | GitHub Actions workflows: one reports what each pull request introduced; the other scans the default branch, uploads to code scanning and keeps one agent-ready issue per batch. |
 
 ## `sarifix.yaml`
 

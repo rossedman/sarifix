@@ -17,3 +17,18 @@ The [GitHub Actions tutorial](https://rossedman.io/sarifix/tutorials/github-acti
 ### How it was tested
 
 The workflow passes `actionlint`. Its `run:` steps were executed against a real pull request on [terragoat](https://github.com/bridgecrewio/terragoat), with `RUNNER_TEMP`, `GITHUB_BASE_REF` and `GITHUB_STEP_SUMMARY` set by hand. The `uses:` steps (checkout, setup-go, setup-trivy, upload-artifact) are standard actions pinned to commit SHAs but haven't run together on GitHub yet.
+
+## `sarifix-issues.yml` and `sarifix_issues.py`
+
+A workflow that scans the default branch weekly, after every push to `main` and on demand. It uploads the SARIF to GitHub code scanning, plans batches with `sarifix fix --mode report`, then runs `sarifix_issues.py` to keep one open issue per batch. Issues are created, refreshed and closed as the scans change. They're written in the agent-ready format of the [task-queue](https://github.com/rossedman/claude/tree/main/plugins/task-queue) plugin, so Claude can fix them in Actions one pull request at a time.
+
+Copy the workflow to `.github/workflows/` and the script to `.github/scripts/`. Two repository variables tune it:
+
+- **`SARIFIX_MAX_OPEN`** (default 10): how many batch issues can be open at once.
+- **`SARIFIX_QUEUE`** (default 0): how many issues to keep labeled `agent-ready`. Above 0, this starts paid agent runs.
+
+Run the script with `--dry-run` to see what it would do. The [tutorial](https://rossedman.io/sarifix/tutorials/claude-queue/) covers the agent side and how to turn it on gradually.
+
+### How it was tested
+
+The workflow passes `actionlint` and `zizmor`, and the script passes `ruff`. The `run:` steps were executed against a test repository with eight scanners, with `RUNNER_TEMP` set by hand and a stand-in `gh` that kept issue state in a file. Three sync runs covered creating, idempotent re-runs, closing fixed batches and queueing. One generated issue was then handed to Claude, which fixed it and passed its **Done when** checks. The `uses:` steps are pinned to commit SHAs but haven't run together on GitHub yet.

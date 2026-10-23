@@ -68,6 +68,8 @@ Add `sarifix check --hook` as a Claude Code Stop hook, and Claude fixes the find
 
 Only findings new since `HEAD` are reported, never the existing backlog. See the [tutorial](https://rossedman.io/sarifix/tutorials/claude-code-hook/).
 
+SARIF files are build output: regenerate them on every run and keep them out of git (`sarif/` in `.gitignore`). In CI, upload them to code scanning or keep them as an artifact. See [Where SARIF files live](https://rossedman.io/sarifix/guides/sarif-files/).
+
 Every command takes `--json` for machine output. Exit codes: `0` success, `1` runtime error, `2` config error, `3` some batches failed verification, or `check` found new findings.
 
 [`examples/sarifix.yaml`](examples/sarifix.yaml) shows every key. The [configuration guide](https://rossedman.io/sarifix/configuration/) and the generated [reference](https://rossedman.io/sarifix/reference/config/) cover them in detail.
