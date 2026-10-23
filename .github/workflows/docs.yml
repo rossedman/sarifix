@@ -1,7 +1,9 @@
 name: docs
 
 # Builds the docs site with --strict on every change to it, and deploys it to GitHub Pages
-# from main and on releases. Pull requests only build.
+# from main. Pull requests only build. There is no release trigger: releases are cut from
+# main, whose docs are already deployed, and the github-pages environment only accepts
+# deployments from main, so a tag ref would be rejected.
 
 on:
   push:
@@ -31,8 +33,6 @@ on:
       - "pkg/config/**"
       - "tools/gendocs/**"
       - ".github/workflows/docs.yml"
-  release:
-    types: [published]
   workflow_dispatch:
 
 permissions: {}
