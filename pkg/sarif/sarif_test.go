@@ -119,6 +119,8 @@ func TestWriteRoundTrip(t *testing.T) {
 	p := filepath.Join(t.TempDir(), "sub", "out.sarif")
 	log.Runs[0].AddPartialFingerprint(0, "sarifix/v1", "abc")
 	log.Runs[0].AddPartialFingerprint(99, "sarifix/v1", "ignored")
+	log.Runs[0].SetResultProperty(0, "sarifix", map[string]any{"status": "skipped"})
+	log.Runs[0].SetResultProperty(-1, "sarifix", "ignored")
 	if err := log.WriteFile(p); err != nil {
 		t.Fatal(err)
 	}
@@ -135,6 +137,9 @@ func TestWriteRoundTrip(t *testing.T) {
 	}
 	if got := again.Runs[0].Run.Results[0].PartialFingerprints["sarifix/v1"]; got != "abc" {
 		t.Errorf("patch not written: %q", got)
+	}
+	if !strings.Contains(string(data), `"status": "skipped"`) {
+		t.Error("property patch not written")
 	}
 	// Unpatched fields are byte-for-byte what the tool wrote.
 	if strings.Contains(string(data), `"enabled": false`) || strings.Contains(string(data), `"language"`) {

@@ -41,10 +41,11 @@ func newDiffCmd(a *app) *cobra.Command {
 so findings that only moved are unchanged.
 
 Fingerprints come from primaryLocationLineHash when the tool provides it,
-then other partialFingerprints, then a hash of the flagged lines. Lines are
-read from the SARIF snippet, else from the files: under --repo for head and
---base-root for base (default --repo), else from the sarifix/v1 fingerprint
-that 'sarifix scan' records.`,
+then other partialFingerprints, then the sarifix/v1 fingerprint 'sarifix scan'
+recorded, then a hash of the finding's anchor: the flagged line, or for a
+block (a Terraform resource, a Kubernetes object) its shortest unique
+opening lines. Anchors are read from the files under --repo for head and
+--base-root for base (default --repo).`,
 		Example: `  sarifix diff --base main.sarif --head pr.sarif
   sarifix diff --base 'base/*.sarif' --head 'sarif/*.sarif' --json`,
 		Args: cobra.NoArgs,
@@ -68,6 +69,12 @@ that 'sarifix scan' records.`,
 			if a.jsonOut() {
 				var out diffJSON
 				out.Diff = d
+				// Empty lists, not null, for JSON consumers.
+				for _, l := range []*[]finding.Finding{&out.New, &out.Fixed, &out.Unchanged} {
+					if *l == nil {
+						*l = []finding.Finding{}
+					}
+				}
 				out.Counts.New, out.Counts.Fixed, out.Counts.Unchanged = len(d.New), len(d.Fixed), len(d.Unchanged)
 				return a.writeJSON(out)
 			}
@@ -85,21 +92,28 @@ that 'sarifix scan' records.`,
 
 // loadFindings loads SARIF globs and extracts findings against root.
 func (a *app) loadFindings(globs []string, root string) ([]finding.Finding, error) {
+	_, fs, err := a.loadLog(globs, root)
+	return fs, err
+}
+
+// loadLog loads SARIF globs, logs skipped inputs, and extracts findings
+// against root.
+func (a *app) loadLog(globs []string, root string) (*sarif.Log, []finding.Finding, error) {
 	log, warns, err := sarif.LoadGlobs(globs, sarif.Options{})
 	if err != nil {
 		if errors.Is(err, sarif.ErrNoFiles) {
-			return nil, &ExitError{Code: ExitRuntime, Err: err}
+			return nil, nil, &ExitError{Code: ExitRuntime, Err: err}
 		}
-		return nil, err
+		return nil, nil, err
 	}
 	for _, w := range warns {
 		a.log.Warn("SARIF input skipped", "source", w.Source, "run", w.Run, "reason", ui.Sanitize(w.Msg, 200))
 	}
 	ex, err := finding.NewExtractor(root)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	return ex.Extract(log), nil
+	return log, ex.Extract(log), nil
 }
 
 // printDiff renders a diff for people.

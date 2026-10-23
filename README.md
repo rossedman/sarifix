@@ -11,7 +11,7 @@
 
 sarifix turns any SARIF-emitting scanner into an automated fixer. It reads SARIF findings, has an AI agent fix them in small single-rule batches, proves each fix by re-running the scanner and your tests, and publishes the result as a PR, review suggestions or local edits. Trivy, Checkov, golangci-lint and your in-house tools plug in through config, with no code changes.
 
-> **Status: Phase 0 (foundation).** Loading, validating, normalizing and fingerprinting SARIF works today, as do `config validate`, `scan` and `diff`. The fixing pipeline (`fix`, `plan`, `doctor`, `stats` and the pr, review, local and report modes) lands in phases 1 to 5. See the [roadmap](https://rossedman.io/sarifix/roadmap/).
+> **Status: Phase 1 (report and plan).** Loading, validating, normalizing and fingerprinting SARIF works today, as do `config validate`, `scan`, `diff`, `plan` and `fix --mode report`. Fixing code (the local, pr and review modes), `doctor` and `stats` land in phases 2 to 5. See the [roadmap](https://rossedman.io/sarifix/roadmap/).
 
 ## Install
 

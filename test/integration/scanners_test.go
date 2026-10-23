@@ -102,13 +102,9 @@ func TestRealScanners(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, f := range d.New {
-		// Whole-file Dockerfile checks legitimately change when lines are added.
-		if f.Tool == "Checkov" && strings.HasPrefix(f.RuleID, "CKV_DOCKER_") {
-			continue
-		}
 		t.Errorf("shifted finding reported as new: %s/%s", f.Tool, f.RuleID)
 	}
-	if d.Counts["unchanged"] < 20 {
+	if d.Counts["unchanged"] < 25 {
 		t.Errorf("only %d unchanged findings", d.Counts["unchanged"])
 	}
 }

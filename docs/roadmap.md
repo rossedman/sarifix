@@ -3,12 +3,12 @@
 sarifix is built in six phases. Each ends with a working, released binary and has to meet its done criteria before the next one starts.
 
 !!! success "Where we are"
-    Phase 0 is the current work: `config validate`, `scan`, `diff` and `version` run today. Everything after it is planned, and its commands do not exist yet.
+    Phases 0 and 1 are built: `config validate`, `scan`, `diff`, `plan`, `fix --mode report` and `version` run today. Everything after them is planned, and those commands and modes do not exist yet.
 
 | Phase | Name | Status |
 | --- | --- | --- |
-| 0 | Foundation | In progress |
-| 1 | Report and plan | Planned |
+| 0 | Foundation | Done |
+| 1 | Report and plan | Done |
 | 2 | Local fixing | Planned |
 | 3 | PR mode and the GitHub Action | Planned |
 | 4 | Review mode and agent hook | Planned |

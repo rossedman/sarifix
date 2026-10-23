@@ -1,0 +1,43 @@
+35 findings  4 batched in 4 batches  11 deferred  20 skipped
+
+Batches
+  1. checkov/CKV_AWS_144 error   1 finding in 1 file → sarifix/checkov/ckv_aws_144
+     main.tf
+  2. checkov/CKV_AWS_145 error   1 finding in 1 file → sarifix/checkov/ckv_aws_145
+     main.tf
+  3. checkov/CKV_AWS_21  error   1 finding in 1 file → sarifix/checkov/ckv_aws_21
+     main.tf
+  4. checkov/CKV_AWS_23  error   1 finding in 1 file → sarifix/checkov/ckv_aws_23
+     main.tf
+
+Deferred (over limits.batches_per_run)
+   1. checkov/CKV_AWS_24  error   1 finding in 1 file → sarifix/checkov/ckv_aws_24
+      main.tf
+   2. trivy/AWS-0086      error   1 finding in 1 file → sarifix/trivy/aws-0086
+      main.tf
+   3. trivy/AWS-0087      error   1 finding in 1 file → sarifix/trivy/aws-0087
+      main.tf
+   4. trivy/AWS-0091      error   1 finding in 1 file → sarifix/trivy/aws-0091
+      main.tf
+   5. trivy/AWS-0093      error   1 finding in 1 file → sarifix/trivy/aws-0093
+      main.tf
+   6. trivy/AWS-0107      error   1 finding in 1 file → sarifix/trivy/aws-0107
+      main.tf
+   7. trivy/AWS-0132      error   1 finding in 1 file → sarifix/trivy/aws-0132
+      main.tf
+   8. trivy/DS-0002       error   1 finding in 1 file → sarifix/trivy/ds-0002
+      Dockerfile
+   9. trivy/DS-0025       error   1 finding in 1 file → sarifix/trivy/ds-0025
+      Dockerfile
+  10. base-image-2026q4   warning 1 finding in 1 file → sarifix/campaign/base-image-2026q4
+      Dockerfile
+  11. trivy/AWS-0090      warning 1 finding in 1 file → sarifix/trivy/aws-0090
+      main.tf
+
+Skipped
+  unrouted         1
+  no_location      4
+  below_min_level  6
+  rule_denied      1
+  rule_not_allowed 6
+  path_denied      2

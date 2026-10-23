@@ -11,7 +11,7 @@ So sarifix never uses line numbers. Compare the repository's two fixtures, which
 ```console
 $ sarifix diff --base '../../sarif/basic/*.sarif' --head '../../sarif/shifted/*.sarif' \
     --repo ../shifted --base-root . --unchanged
-2 new  2 fixed  26 unchanged
+0 new  0 fixed  28 unchanged
 ...
 Unchanged
   = Checkov/CKV_AWS_24 main.tf:7 Ensure no security groups allow ingress from 0.0.0.0:0 to port 22
@@ -25,11 +25,13 @@ For each result, sarifix takes the first of these that exists:
 
 1. **`primaryLocationLineHash`**, when the tool provides it. This is the hash GitHub code scanning uses, so it is already designed to survive edits. A trailing `:N` occurrence suffix is stripped and sarifix numbers occurrences itself.
 2. **Any other `partialFingerprints`** the tool wrote, in key order. Entries written by sarifix itself are not mixed in.
-3. **A computed hash**: `sha256(tool, ruleId, path, snippet)`, where the snippet is the flagged lines with every run of whitespace collapsed to a single space. Reformatting or re-indenting the flagged code does not change it.
+3. **The `sarifix/v1` fingerprint** that `sarifix scan` recorded. It was computed with the scanned checkout at hand, so it beats anything worked out later from files that may have changed since.
+4. **A computed hash**: `sha256(tool, ruleId, path, anchor)`, with every run of whitespace in the anchor collapsed to one space, so reformatting or re-indenting doesn't change it. The anchor is explained [below](#anchors-findings-about-a-whole-block).
+5. **The message**, when there is no location to anchor to.
 
-The snippet comes from the SARIF region when the tool included one. Otherwise sarifix reads the lines from the files: under `--repo` for the head scan and `--base-root` for the base scan. When neither is available it falls back to the `sarifix/v1` fingerprint that `sarifix scan` recorded.
+sarifix reads the anchor's lines from the files: under `--repo` for the head scan, and under `--base-root` (`diff`) or `--baseline-root` (`plan`, `fix`) for the base scan. If the tool put a snippet in the SARIF and the file's lines don't match it, the file belongs to a different checkout, and only the snippet is used.
 
-Identical findings in the same run (same tool, rule, path and snippet) are numbered in order of appearance, so each still has a distinct fingerprint. Diffs compare fingerprints as a multiset: two identical findings in the head and one in the base give one unchanged and one new.
+Identical findings in the same run (same tool, rule, path and anchor) are numbered in order of appearance, so each still has a distinct fingerprint. Diffs compare fingerprints as a multiset: two identical findings in the head and one in the base give one unchanged and one new.
 
 ## What `sarifix scan` records
 
@@ -43,29 +45,32 @@ Identical findings in the same run (same tool, rule, path and snippet) are numbe
 
 That makes a scan self-contained. A later `sarifix diff` against it does not need a checkout of the commit it came from.
 
-## The whole-file limitation
+## Anchors: findings about a whole block
 
-A finding whose region is the entire file has the entire file as its snippet. Change any line of that file and the snippet hash changes, so the finding looks fixed and new.
+Infrastructure scanners usually flag a whole block. Checkov's "RDS cluster has no deletion protection" points at lines 1 to 15 of `rds.tf`, the entire `aws_rds_cluster` resource. Hashing all 15 lines would tie the finding's identity to every attribute in the resource. Fix one rule on that resource and every *other* finding on it would look fixed and new at the same time.
 
-The fixtures show this. Checkov reports `CKV_DOCKER_2` (no `HEALTHCHECK`) and `CKV_DOCKER_3` (no user) against the whole Dockerfile, and the two inserted lines change it:
+So the identity of a finding is its **anchor**:
+
+- For a one-line region, the anchor is that line.
+- For a block, sarifix starts at the block's first non-blank line and takes the fewest lines that appear nowhere else in the file. For Terraform that is the resource header, `resource "aws_rds_cluster" "app1-rds-cluster" {`. For a Kubernetes manifest with several Deployments in one file, it runs from `apiVersion: apps/v1` down to the `name:` line that tells them apart.
+
+Edits inside the block, below the anchor, leave the identity alone. On the [terragoat](https://github.com/bridgecrewio/terragoat) repository, a change that set `deletion_protection = true` on one RDS cluster and added a new S3 bucket diffed as:
 
 ```console
-2 new  2 fixed  26 unchanged
+$ sarifix diff --base 'base/*.sarif' --head 'pr/*.sarif'
+15 new  2 fixed  718 unchanged
 
-New
-  + Checkov/CKV_DOCKER_2 Dockerfile:1 Ensure that HEALTHCHECK instructions have been added to container images
-  ...
 Fixed
-  - Checkov/CKV_DOCKER_2 Dockerfile:1 Ensure that HEALTHCHECK instructions have been added to container images
-  ...
+  - Checkov/CKV_AWS_139 terraform/aws/rds.tf:1 Ensure that RDS clusters have deletion protection enabled
+  - Trivy/AWS-0343 terraform/aws/rds.tf:1 Artifact: terraform/aws/rds.tf Type: terraform Vulnerability AWS-0343 Severity: MEDIUM Message: Cluster does not have De…
 ```
 
-What this means in practice:
+The two fixed findings are the deletion-protection checks from both scanners, and all 15 new ones are in the new bucket's file. Hashing whole blocks instead reported 25 new and 12 fixed for the same change: the cluster's other nine Checkov findings each counted twice.
 
-- It applies to findings about something that is *missing* from a file, where the tool has no line to point at.
-- The cost is bounded: a finding is treated as new once after its file changes, and then keeps its new identity.
-- If the tool provides `primaryLocationLineHash` or other partial fingerprints, those are used instead and the limitation does not apply.
+### What still changes identity
 
-## Reading the output
+- **Edits to the anchor lines themselves**, such as renaming a resource, or inserting a line between `metadata:` and `name:` in a Kubernetes object. sarifix sees a finding on a different block, so it reports one fixed and one new.
+- **Changes to a flagged single line**. On [cobra](https://github.com/spf13/cobra), fixing the typo in `fmt.Fprintf(w, "\n\nAdditional help topcis:")` reported the unchecked-error finding on that line as fixed and new. The line's text changed, so it is a different line.
+- **SARIF read without its files**. If a tool includes a snippet but sarifix can't read the matching file and no `sarifix/v1` was recorded, the anchor falls back to the snippet's first non-blank line. That is less precise when blocks share a first line. Scans made with `sarifix scan` always record `sarifix/v1`, so this only affects SARIF from elsewhere.
 
-`sarifix diff` prints a count line, then **New**, **Fixed** and (with `--unchanged`) **Unchanged** sections. Each entry is `tool/rule path:line message`. Use `--json` for the fingerprints and source file of every finding.
+If the tool provides `primaryLocationLineHash` or other partial fingerprints, those are used instead and none of this applies.

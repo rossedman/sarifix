@@ -9,7 +9,7 @@ How sarifix treats untrusted input, what it will never touch, and how to report 
 sarifix reads SARIF written by other tools and, once the fixing phases land, hands findings to an AI agent that edits your code. Both are attack surface, so the design assumes that everything it reads (SARIF messages, rule help text, repository files) can be hostile.
 
 !!! note "What is enforced today"
-    Phase 0 does not run an agent or change files. Today the model means: SARIF is validated against the 2.1.0 schema and invalid runs are skipped with a warning, scanner commands run as argv without a shell, and unknown placeholders are rejected at load. The agent controls in the table below are the design for phases 2 to 5.
+    sarifix does not yet run an agent or change files (that starts in phase 2). Today the model means: SARIF is validated against the 2.1.0 schema and invalid runs are skipped with a warning, scanner commands run as argv without a shell, and unknown placeholders are rejected at load. The agent controls in the table below are the design for phases 2 to 5.
 
 ### The agent's boundaries
 

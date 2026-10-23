@@ -100,6 +100,8 @@ nav:
           - sarifix: reference/commands/sarifix.md
           - sarifix scan: reference/commands/sarifix_scan.md
           - sarifix diff: reference/commands/sarifix_diff.md
+          - sarifix plan: reference/commands/sarifix_plan.md
+          - sarifix fix: reference/commands/sarifix_fix.md
           - sarifix config: reference/commands/sarifix_config.md
           - sarifix config validate: reference/commands/sarifix_config_validate.md
           - sarifix version: reference/commands/sarifix_version.md
@@ -112,6 +114,7 @@ nav:
           - Dependencies and SARIF I/O: adr/0002-dependencies-and-sarif-io.md
           - Fingerprint details: adr/0003-fingerprints.md
           - Config semantics: adr/0004-config-semantics.md
+          - Policy and batching: adr/0005-policy-and-batching.md
 
 extra:
   social:

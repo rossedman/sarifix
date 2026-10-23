@@ -53,6 +53,9 @@ These need a benchmark, and a fuzz target where they take external input.
 | `placeholder.ExpandArgs`, `Expand` | Builds scanner argv from config | `BenchmarkExpandArgs` | `FuzzExpand` |
 | `glob.MatchPath`, `glob.MatchKey` | Policy checks for every finding and changed file | `BenchmarkMatchPath`, `BenchmarkMatchKey` | `FuzzMatchPath` |
 | `ui.Sanitize` | Makes untrusted text safe for terminals | `BenchmarkSanitize` | `FuzzSanitize` |
+| `policy.Policy.Apply` | Judges every finding against the rules | `BenchmarkApply` | n/a (inputs are already-parsed findings) |
+| `group.Batches`, `group.Slug` | Batches every fixable finding; slugs become branch names | `BenchmarkBatches` | `FuzzSlug` |
+| `plan.Build` | Runs policy and grouping for a whole scan | `BenchmarkBuild` | n/a (no external input) |
 
 Compare benchmark runs with [benchstat](https://pkg.go.dev/golang.org/x/perf/cmd/benchstat): `make bench` saves results under `bench/`.
 

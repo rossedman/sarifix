@@ -40,16 +40,16 @@
           <div><span class="ok">✓</span> <span class="c">image-migrate</span> <span class="w">1</span> finding <span class="d">→ sarif/image-migrate.sarif</span></div>
           <div><span class="p">$</span> <span class="c" data-type>sarifix diff --base 'base/*.sarif' --head 'head/*.sarif' \</span></div>
           <div><span class="c">    --base-root /basic</span></div>
-          <div><span class="w">2 new</span>  <span class="ok">2 fixed</span>  <span class="c">26 unchanged</span><span class="lp-caret"></span></div>
+          <div><span class="w">0 new</span>  <span class="ok">0 fixed</span>  <span class="c">28 unchanged</span><span class="lp-caret"></span></div>
         </div>
       </div>
     </div>
 
     <ul class="lp-wrap lp-stats">
       <li><b>4</b><span>SARIF producers verified, one hand-written</span></li>
-      <li><b>26 of 28</b><span>findings still matched after the lines shifted</span></li>
+      <li><b>28 of 28</b><span>findings still matched after the lines shifted</span></li>
       <li><b>28</b><span>load-time checks on sarifix.yaml</span></li>
-      <li><b>4 of 8</b><span>commands shipped, the rest on the roadmap</span></li>
+      <li><b>6 of 8</b><span>commands shipped, the rest on the roadmap</span></li>
     </ul>
   </section>
 
@@ -121,7 +121,7 @@ line numbers never count</code></pre>
       <div class="lp-features">
         {% for icon, title, body in [
           ("puzzle-outline", "Scanner-agnostic", "Four SARIF producers are tested in the fixture, one of them a 25-line shell script. A new tool is one scanners entry."),
-          ("fingerprint", "Stable identity", "Line numbers never count. Move a finding down two lines and it still matches. Whole-file findings are the documented exception."),
+          ("fingerprint", "Stable identity", "Line numbers never count, and edits inside a flagged resource don't change the identity of its other findings."),
           ("file-alert-outline", "Errors you can act on", "28 load-time checks. Each error names the file, the key path and the line. Exit code 2 means a config error."),
           ("shield-lock-outline", "Workflows are off limits", ".github/workflows/** is always in paths.deny, however you layer your config."),
           ("check-decagram-outline", "Verified or not shipped", "Planned: no change is published unless a rescan and your own tests pass. Nothing is ever auto-merged."),
@@ -168,9 +168,9 @@ line numbers never count</code></pre>
     <div class="lp-wrap">
       <p class="lp-eyebrow">How it works</p>
       <h2>One pipeline.<br><span>Three stages ship today.</span></h2>
-      <p class="lp-lede lp-lede--center">Phase 0 covers ingest, fingerprinting and the baseline diff. Filtering, grouping, the agent, verification and publishing follow in phases 1 to 4.</p>
+      <p class="lp-lede lp-lede--center">Phases 0 and 1 cover ingest, fingerprinting, the baseline diff, filtering, grouping and the report. The agent, verification and the other publish modes follow in phases 2 to 4.</p>
       <figure class="lp-figure">
-        <a href="{{ 'assets/how-it-works.png' | url }}"><img width="2560" height="1280" src="{{ 'assets/how-it-works.png' | url }}" alt="The sarifix pipeline in eight stages: ingest, fingerprint and baseline ship today in phase 0; filter and group are phase 1; fix and verify are phase 2; publish is phases 3 and 4." loading="lazy"></a>
+        <a href="{{ 'assets/how-it-works.png' | url }}"><img width="2560" height="1280" src="{{ 'assets/how-it-works.png' | url }}" alt="The sarifix pipeline in eight stages: ingest, fingerprint and baseline shipped in phase 0; filter and group shipped in phase 1; fix and verify are phase 2; publish ships report mode today and the other modes in phases 2 to 4." loading="lazy"></a>
         <figcaption>Tap to open the full-size diagram</figcaption>
       </figure>
     </div>
