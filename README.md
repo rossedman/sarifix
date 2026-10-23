@@ -68,9 +68,82 @@ Add `sarifix check --hook` as a Claude Code Stop hook, and Claude fixes the find
 
 Only findings new since `HEAD` are reported, never the existing backlog. See the [tutorial](https://rossedman.io/sarifix/tutorials/claude-code-hook/).
 
-Every command takes `--json` for machine output. Exit codes: `0` success, `1` runtime error, `2` config error, `3` some batches failed verification.
+Every command takes `--json` for machine output. Exit codes: `0` success, `1` runtime error, `2` config error, `3` some batches failed verification, or `check` found new findings.
 
 [`examples/sarifix.yaml`](examples/sarifix.yaml) shows every key. The [configuration guide](https://rossedman.io/sarifix/configuration/) and the generated [reference](https://rossedman.io/sarifix/reference/config/) cover them in detail.
+
+## Scanners
+
+Any tool that writes SARIF is a scanner. This `sarifix.yaml` runs eight of them, covering infrastructure as code, Go and Python, secrets, Dockerfiles and the built container image. Keep the ones that fit your repo:
+
+```yaml
+version: 1
+scanners:
+  # Infrastructure as code: Terraform, Kubernetes, Helm, Dockerfiles
+  - name: trivy
+    match: ["Trivy"]
+    command: ["trivy", "config", "--quiet", "--format", "sarif", "-o", "{out}", "{dir}"]
+  - name: checkov
+    match: ["Checkov"]
+    command: ["checkov", "-d", "{dir}", "--quiet", "-o", "sarif", "--output-file-path", "{outdir}"]
+    output: "{outdir}/results_sarif.sarif" # Checkov picks its own file name
+
+  # Code
+  - name: golangci-lint
+    command: ["golangci-lint", "run", "--output.sarif.path={out}", "./..."]
+    workdir: "{dir}"
+  - name: ruff
+    command: ["ruff", "check", "--exit-zero", "--output-format", "sarif", "-o", "{out}", "{dir}"]
+  - name: semgrep
+    match: ["Semgrep OSS", "Semgrep"]
+    command: ["semgrep", "scan", "--quiet", "--metrics=off", "--config", "p/default", "--sarif-output={out}", "{dir}"]
+    timeout: 10m
+
+  # Secrets
+  - name: gitleaks
+    command: ["gitleaks", "dir", "{dir}", "--no-banner", "--report-format", "sarif", "--report-path", "{out}", "--exit-code", "0"]
+
+  # A tool that prints SARIF to stdout: run it through sh and redirect.
+  - name: hadolint
+    command: ["sh", "-c", "hadolint -f sarif Dockerfile > \"$1\"", "sh", "{out}"]
+    workdir: "{dir}"
+
+  # Container images: build the image from the tree being scanned, then check
+  # it against the size, waste and forbidden-path budgets in .muscles.yaml.
+  - name: muscles
+    command:
+      - sh
+      - -c
+      - docker build -q -o type=docker,dest="$2/image.tar" . && muscles images check "$2/image.tar" --dockerfile Dockerfile -o sarif > "$1"
+      - sh
+      - "{out}"
+      - "{outdir}"
+    workdir: "{dir}"
+    env: { GITHUB_WORKSPACE: "{dir}" } # muscles makes paths relative to this
+    timeout: 10m
+rules:
+  min_level: warning
+```
+
+`{dir}` is the tree being scanned, `{out}` the SARIF file sarifix reads, and `{outdir}` a scratch directory for the scan. A scanner may exit non-zero when it finds something; only a missing SARIF file counts as a failure. A `match` is needed only when the tool's SARIF `tool.driver.name` differs from `name`.
+
+[muscles](https://github.com/rossedman/muscles) checks a built image rather than files. That's why its entry builds the image from `{dir}` first: `sarifix check` scans both the base revision and the working tree, and an image built once outside sarifix would look the same in both scans, so nothing would ever be new. Its findings point at the Dockerfile line whose layer broke the budget. The `-o type=docker,dest=` export needs Docker with BuildKit (the default since Docker 23).
+
+With every scanner above, `sarifix check` on a change that adds a `.env` file to the image, a Dockerfile `apk add`, a Go call that drops its error and a Python `shell=True` call reports:
+
+```console
+$ sarifix check --log-level warn
+7 new findings since f110a4257ef8 (0 fixed)
+  gitleaks/aws-access-token warning .env:2
+  golangci-lint/errcheck error y.go:6
+  hadolint/DL3018 warning Dockerfile:2
+  muscles/muscles/forbid error Dockerfile:4
+  semgrep/generic.secrets.security.detected-aws-access-key-id-value.detected-aws-access-key-id-value error .env:2
+  semgrep/python.lang.security.audit.subprocess-shell-true.subprocess-shell-true error b.py:4
+  trivy/DS-0025 error Dockerfile:2
+```
+
+Each finding also prints its message and help link, left out here. An in-house tool plugs in the same way; see [writing a custom scanner](https://rossedman.io/sarifix/tutorials/custom-scanner/).
 
 ## Settings precedence
 
