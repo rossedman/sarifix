@@ -20,6 +20,21 @@ The integration tests run real scanners. Install `trivy`, `checkov` and `golangc
 go test -tags integration ./test/integration/
 ```
 
+## Find your way around
+
+[Architecture](https://rossedman.io/sarifix/architecture/) explains how the packages fit together and what each command does. The top-level folders:
+
+| Folder | What's there |
+| --- | --- |
+| [`cmd/sarifix`](https://github.com/rossedman/sarifix/tree/main/cmd/sarifix) | `main` |
+| [`internal/`](https://github.com/rossedman/sarifix/tree/main/internal) | The CLI (`internal/cli`, one command per file), terminal styles and build info |
+| [`pkg/`](https://github.com/rossedman/sarifix/tree/main/pkg) | The pipeline, one package per step: SARIF loading, findings, policy, batching, report output |
+| [`tools/`](https://github.com/rossedman/sarifix/tree/main/tools) | Repo checks and generators run by `make` and CI ([README](https://github.com/rossedman/sarifix/blob/main/tools/README.md)) |
+| [`testdata/`](https://github.com/rossedman/sarifix/tree/main/testdata) | Fixture repos and real scanner output ([README](https://github.com/rossedman/sarifix/blob/main/testdata/README.md)) |
+| [`test/integration/`](https://github.com/rossedman/sarifix/tree/main/test/integration) | Tests against real scanner binaries ([README](https://github.com/rossedman/sarifix/blob/main/test/integration/README.md)) |
+| [`examples/`](https://github.com/rossedman/sarifix/tree/main/examples) | Config, an in-house scanner and a CI workflow to copy from ([README](https://github.com/rossedman/sarifix/blob/main/examples/README.md)) |
+| [`docs/`](https://github.com/rossedman/sarifix/tree/main/docs), [`overrides/`](https://github.com/rossedman/sarifix/tree/main/overrides) | The docs site; see [Working on the docs](#working-on-the-docs) |
+
 ## The one command
 
 ```sh
@@ -58,6 +73,36 @@ These need a benchmark, and a fuzz target where they take external input.
 | `plan.Build` | Runs policy and grouping for a whole scan | `BenchmarkBuild` | n/a (no external input) |
 
 Compare benchmark runs with [benchstat](https://pkg.go.dev/golang.org/x/perf/cmd/benchstat): `make bench` saves results under `bench/`.
+
+## Working on the docs
+
+The site is MkDocs Material, built with [uv](https://docs.astral.sh/uv/), with dependencies pinned in `requirements-docs.txt`.
+
+```sh
+make docs-serve   # live preview at http://127.0.0.1:8000
+make docs-build   # what CI runs: strict, so broken links and anchors fail
+```
+
+- **Generated pages:** `docs/reference/` is written by `make docs` (`tools/gendocs`) from the CLI and the config structs. Don't edit it by hand: change the command's help text or the struct's `doc` tag, then run `make docs`. CI fails when the committed pages are stale.
+- **Graphics:** the banner, social card and pipeline diagram are HTML in `docs/assets/src/`, rendered to PNG by `docs/assets/render.sh` with headless Chrome or Chromium (`CHROME=/path/to/chrome docs/assets/render.sh banner`). Commit the HTML and the PNG together.
+- **The landing page** is `overrides/home.html`. Its numbers (for example "28 load-time checks") are counted from the code, so update them when the code changes.
+- **Output in docs is real.** Every console block comes from running the command. When a command's output changes, rerun it and paste the new output rather than editing the old block by hand.
+- **New pages** go in `nav:` in `mkdocs.yml`; the strict build fails on a page missing from it.
+
+## CI
+
+`.github/workflows/ci.yml` runs on every push to `main` and every pull request:
+
+| Job | What it checks |
+| --- | --- |
+| `lint` | golangci-lint, one command per file, doc comments, generated docs are current |
+| `test` | `go test -race`, the 90% coverage gate, a one-iteration benchmark run |
+| `govulncheck` | Known vulnerabilities in reachable code |
+| `fuzz <pkg> <target>` | Each fuzz target for 30 seconds; failing inputs are uploaded as an artifact |
+| `integration (real scanners)` | `test/integration` with pinned Trivy, Checkov and golangci-lint |
+| `goreleaser snapshot` | `goreleaser check` and a full snapshot release, including the container image |
+
+`docs.yml` builds the site on changes to it and deploys from `main`; `release.yml` publishes signed releases on `v*` tags.
 
 ## Commits and pull requests
 

@@ -115,6 +115,7 @@ nav:
           - sarifix version: reference/commands/sarifix_version.md
   - Project:
       - Roadmap: roadmap.md
+      - Architecture: architecture.md
       - Security: security.md
       - Contributing: contributing.md
       - Decisions:

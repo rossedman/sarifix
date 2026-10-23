@@ -44,4 +44,4 @@ The `sarifix-report` artifact holds `sarifix.sarif` (every finding with its stat
 - **Scan the default branch on a schedule**: drop the merge-base step and run `sarifix fix --mode report` without `--baseline`. The report then covers the whole backlog.
 
 !!! note
-    sarifix has no tagged release yet. Pin `SARIFIX_REF` to a commit SHA rather than `main`. When releases exist, pin a tag and verify it as described in [Security](../security.md#verifying-releases).
+    The workflow uses `sarifix fix --mode report`, which came after the v0.1.0 release (v0.1.0 has only `scan` and `diff`). Until the next release, pin `SARIFIX_REF` to a commit SHA from `main` rather than `main` itself; after that, pin the release tag. Release binaries can be verified as described in [Security](../security.md#verifying-releases).

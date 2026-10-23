@@ -18,6 +18,9 @@ scanners:
     workdir: "{dir}"
     scope: dir
 
+  # An in-house scanner: any program that writes SARIF. This one is the
+  # repo's test fixture, testdata/tools/image-migrate.sh; in your repo it
+  # would be your own script.
   - name: image-migrate
     command: ["./tools/image-migrate.sh", "{dir}", "{out}"]
     env: { CT_MODE: "ci" }
