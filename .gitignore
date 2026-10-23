@@ -38,6 +38,8 @@ go.work.sum
 /bench/
 /site/
 /sarif/
+/completions/
+/manpages/
 coverage.hand.out
 
 # Python (docs tooling)

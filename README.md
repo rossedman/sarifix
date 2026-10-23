@@ -15,11 +15,19 @@ sarifix turns any SARIF-emitting scanner into an automated fixer. It reads SARIF
 
 ## Install
 
+With Homebrew, on macOS or Linux (releases after v0.2.0):
+
+```sh
+brew install rossedman/tap/sarifix
+```
+
+With Go:
+
 ```sh
 go install github.com/rossedman/sarifix/cmd/sarifix@latest
 ```
 
-Or download a binary from [releases](https://github.com/rossedman/sarifix/releases) and verify it (see [Verifying releases](SECURITY.md#verifying-releases)). Container image: `ghcr.io/rossedman/sarifix`.
+Or download a binary from [releases](https://github.com/rossedman/sarifix/releases) and verify it (see [Verifying releases](SECURITY.md#verifying-releases)). Container image: `ghcr.io/rossedman/sarifix`. Release archives and the Homebrew cask include shell completions and a man page.
 
 ## Quick start
 
