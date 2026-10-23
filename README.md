@@ -88,7 +88,7 @@ permissions:
 steps:
   - uses: actions/checkout@v7
     with: { fetch-depth: 0 }
-  - uses: rossedman/sarifix@v0.3.0
+  - uses: rossedman/sarifix@v0.2.3
 ```
 
 See the [GitHub Action](https://rossedman.io/sarifix/action/) for modes and inputs, and [Turn findings into issues Claude works through](https://rossedman.io/sarifix/tutorials/claude-queue/) to hand the issues to Claude.

@@ -49,7 +49,7 @@ inputs:
     required: false
     default: "false"
   version:
-    description: The sarifix release to install, like v0.3.0. Default the action's own tag, or the latest release.
+    description: The sarifix release to install, like v0.2.3. Default the action's own tag, or the latest release.
     required: false
     default: ""
   install:
