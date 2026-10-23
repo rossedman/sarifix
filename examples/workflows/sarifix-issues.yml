@@ -1,14 +1,13 @@
-# Scans the default branch, uploads the findings to GitHub code scanning, and
-# keeps one issue per sarifix batch (sarifix fix --mode issues) in the
-# agent-ready format, so an agent queue (the task-queue plugin's
-# agent-queue.yml) can work through them.
-# Runs weekly, after every push to main (so merged fixes close their issues
-# and the next batch is queued), and on demand.
-name: sarifix-issues
+# sarifix with the sarifix GitHub Action. On pushes to main, weekly and on
+# demand it scans, uploads to code scanning and keeps one issue per batch for
+# Claude (the task-queue plugin's agent-queue.yml) or a person to fix. On
+# pull requests it reports what the change introduced.
+name: sarifix
 
 on:
   push:
     branches: [main]
+  pull_request:
   schedule:
     - cron: "23 6 * * 1" # Mondays
   workflow_dispatch:
@@ -16,58 +15,28 @@ on:
 permissions: {}
 
 concurrency:
-  group: sarifix-issues
-  cancel-in-progress: false
+  group: sarifix-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  scan:
+  sarifix:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
       contents: read
       actions: read # upload-sarif reads the run's metadata on private repos
-      security-events: write # upload-sarif
-      issues: write # create, update and close the batch issues
-    env:
-      SARIFIX_VERSION: v0.3.0 # the first release with --mode issues
-      CHECKOV_VERSION: "3.3.30"
+      security-events: write # code scanning upload
+      issues: write # one issue per batch
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          fetch-depth: 0 # pull requests are compared with their merge base
           persist-credentials: false
-
-      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+      # Installs sarifix and the scanners sarifix.yaml names, then scans.
+      # SARIFIX_QUEUE (a repository variable) above 0 labels that many
+      # issues agent-ready, which starts paid agent runs; leave it unset to
+      # queue issues by hand.
+      # A tag reads better in an example; pin the tag's commit SHA in your repo.
+      - uses: rossedman/sarifix@v0.3.0 # zizmor: ignore[unpinned-uses]
         with:
-          go-version: stable
-          cache: false
-
-      - uses: aquasecurity/setup-trivy@81e514348e19b6112ce2a7e3ecbafe19c1e1f567 # v0.3.1
-        with:
-          version: v0.76.1 # bump on purpose: new rules arrive as new issues
-
-      - name: Install sarifix and checkov
-        run: |
-          go install "github.com/rossedman/sarifix/cmd/sarifix@${SARIFIX_VERSION}"
-          pipx install "checkov==${CHECKOV_VERSION}"
-
-      # Scan output goes outside the checkout, so no scanner scans it.
-      - name: Scan
-        run: sarifix scan --out-dir "${RUNNER_TEMP}/sarif" --log-level warn
-
-      - name: Upload to code scanning
-        uses: github/codeql-action/upload-sarif@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
-        with:
-          sarif_file: ${{ runner.temp }}/sarif
-          category: sarifix
-
-      # One issue per batch, opened, refreshed and closed as the scans
-      # change. SARIFIX_QUEUE (a repository variable) above 0 labels that
-      # many issues agent-ready, which starts paid agent runs; leave it unset
-      # to queue issues by hand.
-      - name: Sync issues
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-          QUEUE: ${{ vars.SARIFIX_QUEUE || '0' }}
-        run: |
-          sarifix fix --mode issues --sarif "${RUNNER_TEMP}/sarif/*.sarif" \
-            --queue "${QUEUE}" --log-level warn
+          queue: ${{ vars.SARIFIX_QUEUE }}

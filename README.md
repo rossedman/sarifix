@@ -76,6 +76,23 @@ Add `sarifix check --hook` as a Claude Code Stop hook, and Claude fixes the find
 
 Only findings new since `HEAD` are reported, never the existing backlog. See the [tutorial](https://rossedman.io/sarifix/tutorials/claude-code-hook/).
 
+### In GitHub Actions
+
+One step installs sarifix and your scanners, scans, uploads to code scanning and keeps one GitHub issue per batch, for Claude or a person to fix. On pull requests, the same step reports what the change introduced:
+
+```yaml
+permissions:
+  contents: read
+  security-events: write
+  issues: write
+steps:
+  - uses: actions/checkout@v7
+    with: { fetch-depth: 0 }
+  - uses: rossedman/sarifix@v0.3.0
+```
+
+See the [GitHub Action](https://rossedman.io/sarifix/action/) for modes and inputs, and [Turn findings into issues Claude works through](https://rossedman.io/sarifix/tutorials/claude-queue/) to hand the issues to Claude.
+
 SARIF files are build output: regenerate them on every run and keep them out of git (`sarif/` in `.gitignore`). In CI, upload them to code scanning or keep them as an artifact. See [Where SARIF files live](https://rossedman.io/sarifix/guides/sarif-files/).
 
 Every command takes `--json` for machine output. Exit codes: `0` success, `1` runtime error, `2` config error, `3` some batches failed verification, or `check` found new findings.

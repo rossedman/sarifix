@@ -1,0 +1,152 @@
+name: sarifix
+description: Scan with your SARIF scanners, upload to code scanning, and keep one GitHub issue per batch for Claude (or a person) to fix; on pull requests, report what the change introduced.
+author: rossedman
+branding:
+  icon: check-circle
+  color: green
+
+inputs:
+  mode:
+    description: >-
+      auto (default) picks check on pull requests and issues everywhere
+      else. issues scans, uploads to code scanning and syncs one issue per
+      batch. scan only scans and uploads. check reports the findings a pull
+      request introduced, in the job summary and as annotations. install
+      only installs sarifix and the scanners, for a later step (such as an
+      agent fixing an issue) to use.
+    required: false
+    default: auto
+  config:
+    description: Path to sarifix.yaml.
+    required: false
+    default: sarifix.yaml
+  scanners:
+    description: >-
+      Scanners to install: auto (every scanner in sarifix.yaml the action
+      knows: trivy, checkov, golangci-lint, ruff, semgrep, gitleaks,
+      hadolint, tfmetrics), none, or a comma-separated list. Scanners already
+      on PATH are left alone.
+    required: false
+    default: auto
+  upload-sarif:
+    description: Upload the scan to GitHub code scanning (issues and scan modes). Needs security-events write.
+    required: false
+    default: "true"
+  sarif-category:
+    description: The code scanning category.
+    required: false
+    default: sarifix
+  queue:
+    description: Issues mode. How many issues to keep labeled agent-ready for an agent queue; empty uses publish.issues.queue from sarifix.yaml. Above 0, this starts paid agent runs.
+    required: false
+    default: ""
+  dry-run:
+    description: Issues mode. Print what would change in the job summary without writing to GitHub.
+    required: false
+    default: "false"
+  fail-on-new:
+    description: Check mode. Fail the step when the pull request introduces findings.
+    required: false
+    default: "false"
+  version:
+    description: The sarifix release to install, like v0.3.0. Default the action's own tag, or the latest release.
+    required: false
+    default: ""
+  install:
+    description: Install sarifix. Set false to use a sarifix already on PATH.
+    required: false
+    default: "true"
+  token:
+    description: Token for the code scanning upload (security-events write) and the issues (issues write; read for dry-run).
+    required: false
+    default: ${{ github.token }}
+
+outputs:
+  mode:
+    description: The mode that ran.
+    value: ${{ steps.mode.outputs.mode }}
+  sarif-dir:
+    description: Directory of the per-scanner SARIF files (issues and scan modes).
+    value: ${{ steps.scan.outputs.sarif-dir }}
+  opened:
+    description: Issues opened (issues mode).
+    value: ${{ steps.issues.outputs.opened }}
+  closed:
+    description: Issues closed (issues mode).
+    value: ${{ steps.issues.outputs.closed }}
+  queued:
+    description: Issues queued for an agent (issues mode).
+    value: ${{ steps.issues.outputs.queued }}
+  new:
+    description: Findings the pull request introduced (check mode).
+    value: ${{ steps.check.outputs.new }}
+
+runs:
+  using: composite
+  steps:
+    - name: Pick the mode
+      id: mode
+      shell: bash
+      env:
+        MODE: ${{ inputs.mode }}
+        EVENT: ${{ github.event_name }}
+      run: |
+        case "$MODE" in
+          auto) if [[ $EVENT == pull_request || $EVENT == pull_request_target ]]; then mode=check; else mode=issues; fi ;;
+          issues | scan | check | install) mode=$MODE ;;
+          *) echo "::error title=sarifix::mode must be auto, issues, scan, check or install, got $MODE"; exit 2 ;;
+        esac
+        echo "mode=$mode" >>"$GITHUB_OUTPUT"
+        echo "sarifix mode: $mode"
+
+    - name: Install sarifix
+      if: inputs.install == 'true'
+      shell: bash
+      env:
+        SARIFIX_VERSION: ${{ inputs.version }}
+        ACTION_REF: ${{ github.action_ref }}
+      run: '"$GITHUB_ACTION_PATH/scripts/action/install.sh"'
+
+    - name: Install scanners
+      shell: bash
+      env:
+        SCANNERS: ${{ inputs.scanners }}
+        CONFIG: ${{ inputs.config }}
+      run: '"$GITHUB_ACTION_PATH/scripts/action/install-scanners.sh"'
+
+    - name: Scan
+      id: scan
+      if: steps.mode.outputs.mode == 'issues' || steps.mode.outputs.mode == 'scan'
+      shell: bash
+      env:
+        CONFIG: ${{ inputs.config }}
+      run: '"$GITHUB_ACTION_PATH/scripts/action/scan.sh"'
+
+    - name: Upload to code scanning
+      if: (steps.mode.outputs.mode == 'issues' || steps.mode.outputs.mode == 'scan') && inputs.upload-sarif == 'true'
+      uses: github/codeql-action/upload-sarif@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
+      with:
+        sarif_file: ${{ steps.scan.outputs.sarif-dir }}
+        category: ${{ inputs.sarif-category }}
+        token: ${{ inputs.token }}
+
+    - name: Sync issues
+      id: issues
+      if: steps.mode.outputs.mode == 'issues'
+      shell: bash
+      env:
+        GITHUB_TOKEN: ${{ inputs.token }}
+        CONFIG: ${{ inputs.config }}
+        SARIF_DIR: ${{ steps.scan.outputs.sarif-dir }}
+        QUEUE: ${{ inputs.queue }}
+        DRY_RUN: ${{ inputs.dry-run }}
+      run: '"$GITHUB_ACTION_PATH/scripts/action/issues.sh"'
+
+    - name: Check the pull request
+      id: check
+      if: steps.mode.outputs.mode == 'check'
+      shell: bash
+      env:
+        CONFIG: ${{ inputs.config }}
+        FAIL_ON_NEW: ${{ inputs.fail-on-new }}
+      run: '"$GITHUB_ACTION_PATH/scripts/action/check.sh"'

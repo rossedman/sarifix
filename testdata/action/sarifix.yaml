@@ -1,0 +1,10 @@
+# Config for CI's action job, which runs action.yml against this checkout.
+# One fast scanner the action knows how to install.
+version: 1
+scanners:
+  - name: trivy
+    match: ["Trivy"]
+    command: ["trivy", "config", "--quiet", "--format", "sarif", "-o", "{out}", "{dir}"]
+rules:
+  allow: ["trivy/*"]
+  min_level: warning

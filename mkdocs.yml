@@ -91,6 +91,7 @@ nav:
   - Get started:
       - Getting started: getting-started.md
       - Configuration: configuration.md
+      - GitHub Action: action.md
   - Tutorials:
       - Overview: tutorials/index.md
       - Triage an infrastructure backlog: tutorials/iac-backlog.md
