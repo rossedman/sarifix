@@ -108,7 +108,7 @@ func TestFingerprintSources(t *testing.T) {
 	t.Parallel()
 	str := func(s string) *string { return &s }
 	mk := func(pf map[string]string, snippet, msg string) Finding {
-		return Finding{Tool: "t", RuleID: "r", Path: "p", Snippet: snippet, Message: msg, Raw: &sarif.Result{PartialFingerprints: pf, RuleID: str("r")}}
+		return Finding{Tool: "t", RuleID: "r", Path: "p", Anchor: snippet, Message: msg, Raw: &sarif.Result{PartialFingerprints: pf, RuleID: str("r")}}
 	}
 	fp := func(f Finding) string { return baseFingerprint(&f) }
 
@@ -120,15 +120,19 @@ func TestFingerprintSources(t *testing.T) {
 	if fp(mk(map[string]string{"k": "v"}, "a", "")) != fp(mk(map[string]string{"k": "v", FingerprintKey: "z"}, "b", "")) {
 		t.Error("tool partial fingerprints not used")
 	}
-	// Snippet hash: whitespace never matters.
+	// Anchor hash: whitespace never matters.
 	if fp(mk(nil, "a  b\n\tc", "")) != fp(mk(nil, " a b c ", "")) {
 		t.Error("whitespace changed the fingerprint")
 	}
-	// sarifix/v1 stands in for a snippet that can no longer be read.
-	withSnippet := mk(nil, "x = 1", "")
+	// sarifix/v1 stands in for an anchor that can no longer be computed,
+	// and beats one recomputed from a possibly different checkout.
+	withAnchor := mk(nil, "x = 1", "")
 	recorded := mk(map[string]string{FingerprintKey: SnippetHash("t", "r", "p", "x = 1")}, "", "")
-	if fp(withSnippet) != fp(recorded) {
-		t.Error("sarifix/v1 does not match the snippet hash")
+	if fp(withAnchor) != fp(recorded) {
+		t.Error("sarifix/v1 does not match the anchor hash")
+	}
+	if fp(mk(map[string]string{FingerprintKey: "rec"}, "other", "")) != "rec" {
+		t.Error("recomputed anchor beat the recorded fingerprint")
 	}
 	// No snippet, no fingerprints: the message is used.
 	if fp(mk(nil, "", "m1")) == fp(mk(nil, "", "m2")) {
@@ -214,10 +218,10 @@ func FuzzFingerprint(f *testing.F) {
 	f.Add("checkov", "CKV_AWS_24", "main.tf", "resource \"x\" {\n  a = 1\n}", 5)
 	f.Add("", "", "", "", 0)
 	f.Fuzz(func(t *testing.T, tool, rule, path, snippet string, line int) {
-		a := Finding{Tool: tool, RuleID: rule, Path: path, Snippet: snippet, StartLine: line}
+		a := Finding{Tool: tool, RuleID: rule, Path: path, Anchor: snippet, StartLine: line}
 		b := a
 		b.StartLine, b.EndLine = line+100, line+200
-		b.Snippet = "  " + strings.ReplaceAll(snippet, " ", "\n\t ") + "\n"
+		b.Anchor = "  " + strings.ReplaceAll(snippet, " ", "\n\t ") + "\n"
 		fs := []Finding{a, b}
 		assignFingerprints(fs)
 		// Line numbers and whitespace never change identity; occurrence
@@ -284,7 +288,7 @@ func TestRecordedFingerprintBeatsOtherCheckout(t *testing.T) {
 		if f.RuleID != "DS-0025" {
 			continue
 		}
-		if !f.SnippetFromFile || f.Snippet == fs[i].Snippet {
+		if f.Snippet == fs[i].Snippet {
 			t.Fatalf("test setup: snippet %q should come from the other checkout", f.Snippet)
 		}
 		if f.Fingerprint != fs[i].Fingerprint {
@@ -293,4 +297,83 @@ func TestRecordedFingerprintBeatsOtherCheckout(t *testing.T) {
 		return
 	}
 	t.Fatal("no DS-0025 finding")
+}
+
+// anchorOf runs anchor over an in-memory file.
+func anchorOf(t *testing.T, content string, start, end int) string {
+	t.Helper()
+	ex := &Extractor{ReadFile: func(string) ([]byte, error) { return []byte(content), nil }}
+	return ex.anchor("f", start, end)
+}
+
+func TestAnchor(t *testing.T) {
+	t.Parallel()
+	tf := `resource "aws_s3_bucket" "a" {
+  bucket = "a"
+}
+
+resource "aws_s3_bucket" "b" {
+  bucket = "b"
+}
+`
+	k8s := `apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ad
+spec: {}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cart
+spec: {}
+`
+	tests := []struct {
+		name, content string
+		start, end    int
+		want          string
+	}{
+		{"terraform header is unique", tf, 5, 7, `resource "aws_s3_bucket" "b" {`},
+		{"one line", tf, 2, 2, `bucket = "a"`},
+		{"k8s extends to the name", k8s, 7, 11, "apiVersion: apps/v1\nkind: Deployment\nmetadata:\nname: cart"},
+		{"leading blank lines skipped", tf, 4, 7, `resource "aws_s3_bucket" "b" {`},
+		{"blank region", tf, 4, 4, ""},
+		{"past the end", tf, 50, 60, ""},
+		{"never unique: whole region", "x\ny\nx\ny\n", 1, 2, "x\ny"},
+	}
+	for _, tt := range tests {
+		if got := anchorOf(t, tt.content, tt.start, tt.end); got != tt.want {
+			t.Errorf("%s: anchor = %q, want %q", tt.name, got, tt.want)
+		}
+	}
+}
+
+func TestAnchorFindingTrustsMatchingFileOnly(t *testing.T) {
+	t.Parallel()
+	content := "resource \"a\" \"x\" {\n  v = 1\n}\n"
+	ex := &Extractor{ReadFile: func(string) ([]byte, error) { return []byte(content), nil }}
+	// The tool's snippet matches the file: the file-based anchor is used.
+	f := Finding{Path: "f", StartLine: 1, EndLine: 3, Snippet: content}
+	ex.anchorFinding(&f)
+	if f.Anchor != `resource "a" "x" {` {
+		t.Errorf("matching: %q", f.Anchor)
+	}
+	// The file is a different checkout: only the snippet is trusted.
+	g := Finding{Path: "f", StartLine: 1, EndLine: 3, Snippet: "\n  resource \"a\" \"old\" {\n  v = 2\n}"}
+	ex.anchorFinding(&g)
+	if g.Anchor != `resource "a" "old" {` {
+		t.Errorf("mismatch: %q", g.Anchor)
+	}
+	// No snippet: read from the file.
+	h := Finding{Path: "f", StartLine: 2, EndLine: 2}
+	ex.anchorFinding(&h)
+	if h.Snippet != "  v = 1" || h.Anchor != "v = 1" {
+		t.Errorf("from file: %+v", h)
+	}
+	// No location line: nothing.
+	var none Finding
+	ex.anchorFinding(&none)
+	if none.Anchor != "" {
+		t.Error("anchored a finding with no line")
+	}
 }

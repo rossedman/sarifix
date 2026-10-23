@@ -46,20 +46,12 @@ func TestShiftedLines(t *testing.T) {
 		t.Fatalf("got %d base and %d head findings, want 28 each", len(base), len(head))
 	}
 	d := Compare(base, head)
-	// Checkov reports these two rules against the whole Dockerfile, so the
-	// inserted lines are inside their region: a real content change.
-	wholeFile := []string{"Checkov/CKV_DOCKER_2", "Checkov/CKV_DOCKER_3"}
-	if got := keys(d.New); !slices.Equal(got, wholeFile) {
-		t.Errorf("new = %v, want %v", got, wholeFile)
-	}
-	if got := keys(d.Fixed); !slices.Equal(got, wholeFile) {
-		t.Errorf("fixed = %v, want %v", got, wholeFile)
-	}
-	if len(d.Unchanged) != 26 {
-		t.Errorf("unchanged = %d, want 26", len(d.Unchanged))
+	if len(d.New) != 0 || len(d.Fixed) != 0 || len(d.Unchanged) != 28 {
+		t.Errorf("new %v, fixed %v, unchanged %d; want 0, 0, 28", keys(d.New), keys(d.Fixed), len(d.Unchanged))
 	}
 	// Each scanner whose findings moved still matches them. (The custom
-	// tool's FROM line stays on line 1 in the shifted fixture.)
+	// tool's FROM line stays on line 1 in the shifted fixture.) Checkov's
+	// whole-Dockerfile findings match too: their anchor is the FROM line.
 	moved := map[string]bool{}
 	for _, f := range d.Unchanged {
 		for _, b := range base {
@@ -72,6 +64,22 @@ func TestShiftedLines(t *testing.T) {
 		if !moved[tool] {
 			t.Errorf("no shifted-but-unchanged finding for %s", tool)
 		}
+	}
+}
+
+// TestEditedResource diffs real scanner output for the basic fixture against
+// a copy where two Terraform resources were edited inside their blocks: a
+// description added to the security group rule (which fixes Trivy's
+// AWS-0124) and an unrelated attribute added to the bucket. Every other
+// finding on those resources must stay unchanged.
+func TestEditedResource(t *testing.T) {
+	t.Parallel()
+	d := Compare(load(t, "basic"), load(t, "edited"))
+	if got := keys(d.Fixed); !slices.Equal(got, []string{"Trivy/AWS-0124"}) {
+		t.Errorf("fixed = %v", got)
+	}
+	if len(d.New) != 0 || len(d.Unchanged) != 27 {
+		t.Errorf("new %v, unchanged %d; want none and 27", keys(d.New), len(d.Unchanged))
 	}
 }
 

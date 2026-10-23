@@ -41,10 +41,11 @@ func newDiffCmd(a *app) *cobra.Command {
 so findings that only moved are unchanged.
 
 Fingerprints come from primaryLocationLineHash when the tool provides it,
-then other partialFingerprints, then a hash of the flagged lines. The lines
-come from the SARIF snippet; else the sarifix/v1 fingerprint that 'sarifix
-scan' recorded is used; else they are read from the files: under --repo for
-head and --base-root for base (default --repo).`,
+then other partialFingerprints, then the sarifix/v1 fingerprint 'sarifix scan'
+recorded, then a hash of the finding's anchor: the flagged line, or for a
+block (a Terraform resource, a Kubernetes object) its shortest unique
+opening lines. Anchors are read from the files under --repo for head and
+--base-root for base (default --repo).`,
 		Example: `  sarifix diff --base main.sarif --head pr.sarif
   sarifix diff --base 'base/*.sarif' --head 'sarif/*.sarif' --json`,
 		Args: cobra.NoArgs,
@@ -68,6 +69,12 @@ head and --base-root for base (default --repo).`,
 			if a.jsonOut() {
 				var out diffJSON
 				out.Diff = d
+				// Empty lists, not null, for JSON consumers.
+				for _, l := range []*[]finding.Finding{&out.New, &out.Fixed, &out.Unchanged} {
+					if *l == nil {
+						*l = []finding.Finding{}
+					}
+				}
 				out.Counts.New, out.Counts.Fixed, out.Counts.Unchanged = len(d.New), len(d.Fixed), len(d.Unchanged)
 				return a.writeJSON(out)
 			}

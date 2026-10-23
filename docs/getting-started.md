@@ -85,18 +85,10 @@ The repository fixtures contain the same findings twice, with two lines inserted
 ```console
 $ sarifix diff --base '../../sarif/basic/*.sarif' --head '../../sarif/shifted/*.sarif' \
     --repo ../shifted --base-root .
-2 new  2 fixed  26 unchanged
-
-New
-  + Checkov/CKV_DOCKER_2 Dockerfile:1 Ensure that HEALTHCHECK instructions have been added to container images
-  + Checkov/CKV_DOCKER_3 Dockerfile:1 Ensure that a user for the container has been created
-
-Fixed
-  - Checkov/CKV_DOCKER_2 Dockerfile:1 Ensure that HEALTHCHECK instructions have been added to container images
-  - Checkov/CKV_DOCKER_3 Dockerfile:1 Ensure that a user for the container has been created
+0 new  0 fixed  28 unchanged
 ```
 
-Twenty-six findings moved but are still recognized as the same finding. The two reported as new and fixed are whole-file findings, which change identity whenever the file changes. [Fingerprints](guides/fingerprints.md) explains why, and what that limitation means for you.
+Every finding moved, and every one is still recognized as the same finding. [Fingerprints](guides/fingerprints.md) explains how, and the few edits that do change a finding's identity.
 
 `--repo` is the checkout of the head commit and `--base-root` the checkout of the base commit. sarifix reads source lines from them when the SARIF has no snippet. Add `--unchanged` to list the unchanged findings too, or `--json` for machine output.
 

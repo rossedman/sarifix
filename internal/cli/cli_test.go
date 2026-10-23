@@ -172,7 +172,7 @@ func TestDiff(t *testing.T) {
 	head := filepath.Join(testdata, "sarif", "shifted", "*.sarif")
 	args := []string{"diff", "--base", base, "--head", head, "--base-root", filepath.Join(testdata, "repos", "basic"), "--repo", filepath.Join(testdata, "repos", "shifted")}
 	out, _, code := run(t, args...)
-	if code != 0 || !strings.Contains(out, "2 new  2 fixed  26 unchanged") || !strings.Contains(out, "+ Checkov/CKV_DOCKER_2 Dockerfile:1") || strings.Contains(out, "Unchanged") {
+	if code != 0 || !strings.Contains(out, "0 new  0 fixed  28 unchanged") || strings.Contains(out, "Unchanged") {
 		t.Errorf("code=%d out=%s", code, out)
 	}
 	out, _, _ = run(t, append(args, "--unchanged")...)
@@ -181,10 +181,11 @@ func TestDiff(t *testing.T) {
 	}
 	out, _, _ = run(t, append(args, "--json")...)
 	var d struct {
-		Counts map[string]int   `json:"counts"`
-		New    []map[string]any `json:"new"`
+		Counts    map[string]int   `json:"counts"`
+		New       []map[string]any `json:"new"`
+		Unchanged []map[string]any `json:"unchanged"`
 	}
-	if err := json.Unmarshal([]byte(out), &d); err != nil || d.Counts["unchanged"] != 26 || d.New[0]["fingerprint"] == "" {
+	if err := json.Unmarshal([]byte(out), &d); err != nil || d.Counts["unchanged"] != 28 || d.New == nil || d.Unchanged[0]["fingerprint"] == "" {
 		t.Errorf("json: %v %s", err, out)
 	}
 

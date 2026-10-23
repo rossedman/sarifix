@@ -43,13 +43,15 @@ type Finding struct {
 	StartLine int    `json:"startLine,omitempty"`
 	EndLine   int    `json:"endLine,omitempty"`
 	Snippet   string `json:"-"`
-	// SnippetFromFile is set when Snippet was read from the repo rather
-	// than taken from the SARIF, so it may come from a different checkout
-	// than the one scanned.
-	SnippetFromFile bool   `json:"-"`
-	Fingerprint     string `json:"fingerprint"`
-	HelpText        string `json:"-"`
-	Source          string `json:"source"`
+	// Anchor is the text that identifies the finding: the flagged line for
+	// a one-line region, and for a block (a Terraform resource, a
+	// Kubernetes object) the shortest run of lines from the block's start
+	// that is unique in the file. Edits inside the block below the anchor
+	// don't change it.
+	Anchor      string `json:"-"`
+	Fingerprint string `json:"fingerprint"`
+	HelpText    string `json:"-"`
+	Source      string `json:"source"`
 
 	Raw *sarif.Result `json:"-"`
 	// Run and ResultIndex locate Raw in its log, so sarifix can annotate it.
@@ -88,7 +90,7 @@ type Extractor struct {
 	// file access; findings then fingerprint from the SARIF alone.
 	ReadFile func(rel string) ([]byte, error)
 
-	cache map[string][]string
+	cache map[string]*file
 }
 
 // NewExtractor returns an Extractor reading files under root.
@@ -161,47 +163,136 @@ func (e *Extractor) locate(f *Finding, run *sarif.Run, res *sarif.Result) {
 				f.Snippet = *r.Snippet.Text
 			}
 		}
-		if f.Snippet == "" && f.StartLine > 0 {
-			f.Snippet = e.lines(p, f.StartLine, f.EndLine)
-			f.SnippetFromFile = f.Snippet != ""
-		}
+		e.anchorFinding(f)
 		return
+	}
+}
+
+// anchorFinding sets Anchor, and Snippet when the SARIF has none. The file
+// is used only when it holds the lines the tool scanned: if the SARIF
+// carries a snippet that disagrees with the file, the file is another
+// checkout and only the snippet is trusted.
+func (e *Extractor) anchorFinding(f *Finding) {
+	if f.StartLine <= 0 {
+		return
+	}
+	fromFile := e.lines(f.Path, f.StartLine, f.EndLine)
+	toolSnippet := f.Snippet
+	if toolSnippet == "" {
+		f.Snippet = fromFile
+	}
+	if fromFile != "" && (toolSnippet == "" || CollapseSpace(toolSnippet) == CollapseSpace(fromFile)) {
+		f.Anchor = e.anchor(f.Path, f.StartLine, f.EndLine)
+		return
+	}
+	// No usable file: the first non-blank line of the tool's snippet.
+	for _, line := range strings.Split(toolSnippet, "\n") {
+		if c := CollapseSpace(line); c != "" {
+			f.Anchor = c
+			return
+		}
 	}
 }
 
 // maxSnippetLines caps how much of a file a region may pull into a snippet.
 const maxSnippetLines = 200
 
-// lines returns lines start..end (1-based, inclusive) of a repo file.
-func (e *Extractor) lines(rel string, start, end int) string {
+// file holds a repo file's lines, whitespace-collapsed, with an index from
+// line text to the positions it occurs at.
+type file struct {
+	raw       []string
+	collapsed []string
+	at        map[string][]int
+}
+
+// file reads and indexes a repo-relative file once; nil if unreadable.
+func (e *Extractor) file(rel string) *file {
 	if e.ReadFile == nil {
-		return ""
+		return nil
 	}
 	if e.cache == nil {
-		e.cache = map[string][]string{}
+		e.cache = map[string]*file{}
 	}
-	ls, ok := e.cache[rel]
-	if !ok {
-		data, err := e.ReadFile(rel)
-		if err == nil {
-			sc := bufio.NewScanner(bytes.NewReader(data))
-			sc.Buffer(make([]byte, 0, 64*1024), 4*1024*1024)
-			for sc.Scan() {
-				ls = append(ls, sc.Text())
-			}
+	if f, ok := e.cache[rel]; ok {
+		return f
+	}
+	var f *file
+	if data, err := e.ReadFile(rel); err == nil {
+		f = &file{at: map[string][]int{}}
+		sc := bufio.NewScanner(bytes.NewReader(data))
+		sc.Buffer(make([]byte, 0, 64*1024), 4*1024*1024)
+		for sc.Scan() {
+			c := CollapseSpace(sc.Text())
+			f.at[c] = append(f.at[c], len(f.raw))
+			f.raw = append(f.raw, sc.Text())
+			f.collapsed = append(f.collapsed, c)
 		}
-		e.cache[rel] = ls
 	}
-	if start > len(ls) {
+	e.cache[rel] = f
+	return f
+}
+
+// span clamps a 1-based inclusive region to the file and the snippet cap,
+// returning 0-based [lo, hi) or ok=false when it starts past the end.
+func span(f *file, start, end int) (int, int, bool) {
+	if f == nil || start < 1 || start > len(f.raw) {
+		return 0, 0, false
+	}
+	end = min(end, len(f.raw), start+maxSnippetLines-1)
+	return start - 1, end, true
+}
+
+// lines returns lines start..end (1-based, inclusive) of a repo file.
+func (e *Extractor) lines(rel string, start, end int) string {
+	f := e.file(rel)
+	lo, hi, ok := span(f, start, end)
+	if !ok {
 		return ""
 	}
-	if end > len(ls) {
-		end = len(ls)
+	return strings.Join(f.raw[lo:hi], "\n")
+}
+
+// anchor returns the region's identifying text: starting at its first
+// non-blank line, the fewest lines that occur nowhere else in the file (or
+// the whole region if no prefix is unique), whitespace-collapsed.
+func (e *Extractor) anchor(rel string, start, end int) string {
+	f := e.file(rel)
+	lo, hi, ok := span(f, start, end)
+	if !ok {
+		return ""
 	}
-	if end-start >= maxSnippetLines {
-		end = start + maxSnippetLines - 1
+	for lo < hi && f.collapsed[lo] == "" {
+		lo++
 	}
-	return strings.Join(ls[start-1:end], "\n")
+	if lo == hi {
+		return ""
+	}
+	others := f.at[f.collapsed[lo]]
+	k := 1
+	for ; lo+k < hi; k++ {
+		if unique(f, lo, k, others) {
+			break
+		}
+	}
+	return strings.Join(f.collapsed[lo:lo+k], "\n")
+}
+
+// unique reports whether the k lines at lo occur at no other start
+// position in candidates.
+func unique(f *file, lo, k int, candidates []int) bool {
+	for _, j := range candidates {
+		if j == lo || j+k > len(f.collapsed) {
+			continue
+		}
+		same := true
+		for i := 1; i < k && same; i++ {
+			same = f.collapsed[j+i] == f.collapsed[lo+i]
+		}
+		if same {
+			return false
+		}
+	}
+	return true
 }
 
 // lookupRule finds the rule descriptor for res. go-sarif decodes a missing
@@ -328,22 +419,19 @@ func baseFingerprint(f *Finding) string {
 			}
 		}
 	}
-	// A snippet the tool wrote is the truth about the scanned code.
-	if hasContent(f.Snippet) && !f.SnippetFromFile {
-		return SnippetHash(f.Tool, f.RuleID, f.Path, f.Snippet)
-	}
-	// sarifix/v1 was computed by `sarifix scan` from the checkout that was
-	// scanned, so it beats lines read now from files that may have changed
-	// since (a baseline scan of an older commit, read in a newer checkout).
+	// sarifix/v1 was computed by `sarifix scan` with the scanned checkout
+	// at hand, so it beats anything recomputed now from files that may have
+	// changed since (a baseline scan of an older commit, read in a newer
+	// checkout).
 	if f.Raw != nil {
 		if v := f.Raw.PartialFingerprints[FingerprintKey]; v != "" {
 			return v
 		}
 	}
-	if hasContent(f.Snippet) {
-		return SnippetHash(f.Tool, f.RuleID, f.Path, f.Snippet)
+	if hasContent(f.Anchor) {
+		return SnippetHash(f.Tool, f.RuleID, f.Path, f.Anchor)
 	}
-	// No snippet anywhere: the message is the best line-independent content.
+	// No anchor anywhere: the message is the best line-independent content.
 	return SnippetHash(f.Tool, f.RuleID, f.Path, "\x01"+f.Message)
 }
 
@@ -354,10 +442,10 @@ func baseFingerprint(f *Finding) string {
 // not tied to a loaded run, are left alone.
 func Annotate(fs []Finding) {
 	for _, f := range fs {
-		if f.Run == nil || !hasContent(f.Snippet) {
+		if f.Run == nil || !hasContent(f.Anchor) {
 			continue
 		}
-		f.Run.AddPartialFingerprint(f.ResultIndex, FingerprintKey, SnippetHash(f.Tool, f.RuleID, f.Path, f.Snippet))
+		f.Run.AddPartialFingerprint(f.ResultIndex, FingerprintKey, SnippetHash(f.Tool, f.RuleID, f.Path, f.Anchor))
 	}
 }
 

@@ -40,14 +40,14 @@
           <div><span class="ok">✓</span> <span class="c">image-migrate</span> <span class="w">1</span> finding <span class="d">→ sarif/image-migrate.sarif</span></div>
           <div><span class="p">$</span> <span class="c" data-type>sarifix diff --base 'base/*.sarif' --head 'head/*.sarif' \</span></div>
           <div><span class="c">    --base-root /basic</span></div>
-          <div><span class="w">2 new</span>  <span class="ok">2 fixed</span>  <span class="c">26 unchanged</span><span class="lp-caret"></span></div>
+          <div><span class="w">0 new</span>  <span class="ok">0 fixed</span>  <span class="c">28 unchanged</span><span class="lp-caret"></span></div>
         </div>
       </div>
     </div>
 
     <ul class="lp-wrap lp-stats">
       <li><b>4</b><span>SARIF producers verified, one hand-written</span></li>
-      <li><b>26 of 28</b><span>findings still matched after the lines shifted</span></li>
+      <li><b>28 of 28</b><span>findings still matched after the lines shifted</span></li>
       <li><b>28</b><span>load-time checks on sarifix.yaml</span></li>
       <li><b>6 of 8</b><span>commands shipped, the rest on the roadmap</span></li>
     </ul>
@@ -121,7 +121,7 @@ line numbers never count</code></pre>
       <div class="lp-features">
         {% for icon, title, body in [
           ("puzzle-outline", "Scanner-agnostic", "Four SARIF producers are tested in the fixture, one of them a 25-line shell script. A new tool is one scanners entry."),
-          ("fingerprint", "Stable identity", "Line numbers never count. Move a finding down two lines and it still matches. Whole-file findings are the documented exception."),
+          ("fingerprint", "Stable identity", "Line numbers never count, and edits inside a flagged resource don't change the identity of its other findings."),
           ("file-alert-outline", "Errors you can act on", "28 load-time checks. Each error names the file, the key path and the line. Exit code 2 means a config error."),
           ("shield-lock-outline", "Workflows are off limits", ".github/workflows/** is always in paths.deny, however you layer your config."),
           ("check-decagram-outline", "Verified or not shipped", "Planned: no change is published unless a rescan and your own tests pass. Nothing is ever auto-merged."),
