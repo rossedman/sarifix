@@ -108,3 +108,55 @@ func TestRealScanners(t *testing.T) {
 		t.Errorf("only %d unchanged findings", d.Counts["unchanged"])
 	}
 }
+
+// TestCheckWithRealScanners commits the basic fixture, then adds an
+// unhardened S3 bucket and checks that sarifix check reports only the new
+// bucket's findings, never the fixture's existing ones.
+func TestCheckWithRealScanners(t *testing.T) {
+	dir := copyDir(t, filepath.Join(root, "testdata", "repos", "basic"))
+	cfg, err := os.ReadFile(filepath.Join(root, "examples", "sarifix.yaml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	cfg = bytes.ReplaceAll(cfg, []byte("./tools/image-migrate.sh"), []byte(filepath.Join(root, "testdata", "tools", "image-migrate.sh")))
+	if err := os.WriteFile(filepath.Join(dir, "sarifix.yaml"), cfg, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	for _, args := range [][]string{{"init", "-q"}, {"add", "."}, {"-c", "user.name=t", "-c", "user.email=t@example.com", "commit", "-qm", "base"}} {
+		if out, err := exec.Command("git", append([]string{"-C", dir}, args...)...).CombinedOutput(); err != nil {
+			t.Fatalf("git %v: %v %s", args, err, out)
+		}
+	}
+	if out := sarifix(t, "check", "--repo", dir, "--json"); !strings.Contains(out, `"new": []`) {
+		t.Fatalf("clean tree reported findings:\n%s", out)
+	}
+
+	bucket := "resource \"aws_s3_bucket\" \"exports\" {\n  bucket = \"exports\"\n}\n"
+	if err := os.WriteFile(filepath.Join(dir, "exports.tf"), []byte(bucket), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	var out, errb bytes.Buffer
+	err = cli.Execute(context.Background(), []string{"check", "--repo", dir, "--json"}, &out, &errb)
+	if code := cli.ExitCode(err); code != cli.ExitFindings {
+		t.Fatalf("exit %d: %s", code, errb.String())
+	}
+	var res struct {
+		New []struct {
+			RuleKey string `json:"ruleKey"`
+			Path    string `json:"path"`
+		} `json:"new"`
+	}
+	if err := json.Unmarshal(out.Bytes(), &res); err != nil {
+		t.Fatal(err)
+	}
+	scanners := map[string]bool{}
+	for _, f := range res.New {
+		if f.Path != "exports.tf" {
+			t.Errorf("pre-existing finding reported: %+v", f)
+		}
+		scanners[strings.SplitN(f.RuleKey, "/", 2)[0]] = true
+	}
+	if !scanners["trivy"] || !scanners["checkov"] {
+		t.Errorf("want findings from trivy and checkov, got %v", res.New)
+	}
+}

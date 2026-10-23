@@ -7,6 +7,7 @@ Six walk-throughs on real open-source repositories, each built around one job sa
 - **[Compare against an older release](release-history.md)** on [cobra](https://github.com/spf13/cobra) (Go). Scan two commits like for like with golangci-lint, and avoid the settings that silently skew the comparison.
 - **[Bring your own scanner and run a migration](custom-scanner.md)** on [awesome-compose](https://github.com/docker/awesome-compose) (Dockerfiles). Plug in Hadolint and a short Python script, and group a migration into a campaign.
 - **[Roll out a policy across repositories](org-policy.md)** on [microservices-demo](https://github.com/GoogleCloudPlatform/microservices-demo) (Kubernetes). Layer a platform default config under each repository's own, and keep generated files out of the queue.
+- **[Give Claude Code feedback on its changes](claude-code-hook.md)**, for any repository. Run `sarifix check --hook` as a Claude Code Stop hook, so Claude fixes the findings its changes introduced before it finishes.
 - **[Report on every pull request in GitHub Actions](github-actions.md)**, for any repository. Run the pull-request check in CI and publish a job summary.
 
 ## Before you start

@@ -63,6 +63,10 @@ type Options struct {
 	// Baseline holds fingerprints of findings that existed before; those are
 	// skipped (--baseline).
 	Baseline map[string]int
+	// IgnoreAllow skips the rules.allow check. rules.allow says what sarifix
+	// may fix on its own; feedback on a change (sarifix check) covers every
+	// rule that isn't denied.
+	IgnoreAllow bool
 }
 
 // Policy applies a config's rules to findings.
@@ -144,7 +148,7 @@ func (p *Policy) judge(f finding.Finding, baseline map[string]int) Item {
 		return it.skip(ReasonRuleDenied, g)
 	}
 	// A campaign's rules are allowed by being in the campaign.
-	if it.Campaign == "" {
+	if it.Campaign == "" && !p.opts.IgnoreAllow {
 		if _, ok := firstKeyMatch(p.cfg.Rules.Allow, key); !ok {
 			return it.skip(ReasonNotAllowed, "")
 		}

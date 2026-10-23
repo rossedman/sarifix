@@ -32,6 +32,7 @@ Settings precedence: flag > SARIFIX_* environment variable > settings file
 
 ### SEE ALSO
 
+* [sarifix check](sarifix_check.md)	 - Report findings your uncommitted changes introduced
 * [sarifix config](sarifix_config.md)	 - Inspect and validate sarifix.yaml
 * [sarifix diff](sarifix_diff.md)	 - Print new, fixed and unchanged findings by fingerprint
 * [sarifix fix](sarifix_fix.md)	 - Run the fix pipeline (report mode today)
