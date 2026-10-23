@@ -76,7 +76,7 @@ Every command takes `--json` for machine output. Exit codes: `0` success, `1` ru
 
 ## Scanners
 
-Any tool that writes SARIF is a scanner. This `sarifix.yaml` runs eight of them, covering infrastructure as code, Go and Python, secrets, Dockerfiles and the built container image. Keep the ones that fit your repo:
+Any tool that writes SARIF is a scanner. This `sarifix.yaml` runs eight of them, covering infrastructure as code and Terraform hygiene, Go and Python, secrets and Dockerfiles. Keep the ones that fit your repo:
 
 ```yaml
 version: 1
@@ -89,6 +89,18 @@ scanners:
     match: ["Checkov"]
     command: ["checkov", "-d", "{dir}", "--quiet", "-o", "sarif", "--output-file-path", "{outdir}"]
     output: "{outdir}/results_sarif.sarif" # Checkov picks its own file name
+
+  # Terraform hygiene: parse errors, unpinned modules, modules that follow a
+  # branch. tfmetrics names its SARIF file after the repo, so copy it to {out}.
+  - name: tfmetrics
+    command:
+      - sh
+      - -c
+      - tfmetrics scan "$1" --out "$2/tfmetrics" --sink sarif > /dev/null && cp "$2"/tfmetrics/sarif/*.sarif "$3"
+      - sh
+      - "{dir}"
+      - "{outdir}"
+      - "{out}"
 
   # Code
   - name: golangci-lint
@@ -109,39 +121,27 @@ scanners:
   - name: hadolint
     command: ["sh", "-c", "hadolint -f sarif Dockerfile > \"$1\"", "sh", "{out}"]
     workdir: "{dir}"
-
-  # Container images: build the image from the tree being scanned, then check
-  # it against the size, waste and forbidden-path budgets in .muscles.yaml.
-  - name: muscles
-    command:
-      - sh
-      - -c
-      - docker build -q -o type=docker,dest="$2/image.tar" . && muscles images check "$2/image.tar" --dockerfile Dockerfile -o sarif > "$1"
-      - sh
-      - "{out}"
-      - "{outdir}"
-    workdir: "{dir}"
-    env: { GITHUB_WORKSPACE: "{dir}" } # muscles makes paths relative to this
-    timeout: 10m
 rules:
   min_level: warning
 ```
 
 `{dir}` is the tree being scanned, `{out}` the SARIF file sarifix reads, and `{outdir}` a scratch directory for the scan. A scanner may exit non-zero when it finds something; only a missing SARIF file counts as a failure. A `match` is needed only when the tool's SARIF `tool.driver.name` differs from `name`.
 
-[muscles](https://github.com/rossedman/muscles) checks a built image rather than files. That's why its entry builds the image from `{dir}` first: `sarifix check` scans both the base revision and the working tree, and an image built once outside sarifix would look the same in both scans, so nothing would ever be new. Its findings point at the Dockerfile line whose layer broke the budget. The `-o type=docker,dest=` export needs Docker with BuildKit (the default since Docker 23).
+[tfmetrics](https://github.com/rossedman/tfmetrics) reports Terraform that doesn't parse, remote modules with no version or ref, and git modules that follow a branch. Its outdated-module rule needs version lookups, so it never fires from `scan`. It writes one file per repo, named after the repo, so its entry copies that file to `{out}`. A repo with no Terraform gets no file, and sarifix then reports the scanner as failed, so use the entry only where there's Terraform.
 
-With every scanner above, `sarifix check` on a change that adds a `.env` file to the image, a Dockerfile `apk add`, a Go call that drops its error and a Python `shell=True` call reports:
+With every scanner above, `sarifix check` reports nine findings on a change that adds a `.env` file, a Dockerfile `apk add`, a Go call that drops its error, a Python `shell=True` call and an unpinned Terraform module. Checkov flags the module too:
 
 ```console
 $ sarifix check --log-level warn
-7 new findings since f110a4257ef8 (0 fixed)
+9 new findings since 906c21e0838e (0 fixed)
+  checkov/CKV_TF_1 error main.tf:10
+  checkov/CKV_TF_2 error main.tf:10
   gitleaks/aws-access-token warning .env:2
   golangci-lint/errcheck error y.go:6
   hadolint/DL3018 warning Dockerfile:2
-  muscles/muscles/forbid error Dockerfile:4
   semgrep/generic.secrets.security.detected-aws-access-key-id-value.detected-aws-access-key-id-value error .env:2
   semgrep/python.lang.security.audit.subprocess-shell-true.subprocess-shell-true error b.py:4
+  tfmetrics/tfmetrics/unpinned-module warning main.tf:10
   trivy/DS-0025 error Dockerfile:2
 ```
 
