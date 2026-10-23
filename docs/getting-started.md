@@ -7,6 +7,15 @@ Install sarifix, write a first config, scan a repo, and compare two scans. Every
 
 ## Install
 
+=== "Homebrew"
+
+    On macOS or Linux, for releases after v0.2.0. The cask installs shell completions and the man page too.
+
+    ```bash
+    brew install rossedman/tap/sarifix
+    sarifix version
+    ```
+
 === "go install"
 
     Needs Go 1.27 or newer.

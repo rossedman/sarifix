@@ -7,6 +7,7 @@ before:
   hooks:
     - go mod tidy
     - go run ./tools/gendocs
+    - ./tools/release-extras.sh
 
 builds:
   - id: sarifix
@@ -34,6 +35,8 @@ archives:
     files:
       - LICENSE
       - README.md
+      - completions/*
+      - manpages/*
 
 checksum:
   name_template: checksums.txt
@@ -72,6 +75,37 @@ docker_signs:
   - cmd: cosign
     artifacts: manifests
     args: ["sign", "--yes", "${artifact}@${digest}"]
+
+homebrew_casks:
+  - name: sarifix
+    ids: [sarifix]
+    repository:
+      owner: rossedman
+      name: homebrew-tap
+      token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
+    # Without the token (snapshots, forks) the cask is built but not pushed.
+    skip_upload: '{{ if not (index .Env "HOMEBREW_TAP_GITHUB_TOKEN") }}true{{ else }}auto{{ end }}'
+    directory: Casks
+    homepage: https://rossedman.io/sarifix/
+    description: Turn any SARIF scanner into a verified auto-fixer
+    license: MIT
+    commit_author:
+      name: goreleaserbot
+      email: bot@goreleaser.com
+    commit_msg_template: "sarifix {{ .Tag }}"
+    completions:
+      bash: completions/sarifix.bash
+      zsh: completions/sarifix.zsh
+      fish: completions/sarifix.fish
+    manpages:
+      - manpages/sarifix.1.gz
+    hooks:
+      post:
+        # The binary isn't notarized: without this, macOS refuses to run it.
+        install_steps: |
+          on_macos do
+            run "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "{{ .StagedPath }}/sarifix"]
+          end
 
 release:
   github:
