@@ -68,7 +68,7 @@ sarifix's own CLI settings resolve as **flag > `SARIFIX_*` environment variable 
 
 ## Documentation
 
-The full docs live at **<https://rossedman.io/sarifix/>**: [getting started](https://rossedman.io/sarifix/getting-started/), [how fingerprints work](https://rossedman.io/sarifix/guides/fingerprints/), the [security model](https://rossedman.io/sarifix/security/) and the [command reference](https://rossedman.io/sarifix/reference/commands/sarifix/).
+The full docs live at **<https://rossedman.io/sarifix/>**: [getting started](https://rossedman.io/sarifix/getting-started/), [tutorials](https://rossedman.io/sarifix/tutorials/) on real repositories, [how fingerprints work](https://rossedman.io/sarifix/guides/fingerprints/), the [security model](https://rossedman.io/sarifix/security/) and the [command reference](https://rossedman.io/sarifix/reference/commands/sarifix/).
 
 ## Contributing
 
