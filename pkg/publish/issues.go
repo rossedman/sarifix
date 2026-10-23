@@ -50,6 +50,11 @@ type IssuesOptions struct {
 	QueueLabel string
 	// Links makes file:line references into links; zero values give plain text.
 	Links Links
+	// Scanned names the scanners whose output this run read. An issue is
+	// closed only when its batch's scanner was scanned, so a scanner that
+	// failed or wasn't run doesn't make its batches look fixed. Nil trusts
+	// every scanner.
+	Scanned map[string]bool
 	// DryRun reports the actions without calling the Tracker's writes.
 	DryRun bool
 }
@@ -94,8 +99,12 @@ const (
 	maxListed  = 50
 )
 
-// markerRE finds the batch ID an issue was opened for.
-var markerRE = regexp.MustCompile(`<!-- sarifix-batch: (.+?) -->`)
+// markerRE finds the batch ID an issue was opened for, and scannerRE the
+// scanner that reported it.
+var (
+	markerRE  = regexp.MustCompile(`<!-- sarifix-batch: (.+?) -->`)
+	scannerRE = regexp.MustCompile(`<!-- sarifix-scanner: (.+?) -->`)
+)
 
 // shaRE matches commit SHAs, which change on every scan without changing
 // what an issue asks for.
@@ -144,8 +153,8 @@ func Issues(ctx context.Context, t Tracker, batches []group.Batch, opts IssuesOp
 
 	// Close issues for batches that are gone, in issue order.
 	gone := make([]string, 0)
-	for id := range byBatch {
-		if !current[id] {
+	for id, is := range byBatch {
+		if !current[id] && (opts.Scanned == nil || opts.Scanned[issueScanner(id, is.Body)]) {
 			gone = append(gone, id)
 		}
 	}
@@ -215,6 +224,16 @@ func Issues(ctx context.Context, t Tracker, batches []group.Batch, opts IssuesOp
 	return actions, nil
 }
 
+// issueScanner is the scanner behind an issue: its scanner marker, or for
+// issues opened before that marker existed, the batch ID up to the "/".
+func issueScanner(id, body string) string {
+	if m := scannerRE.FindStringSubmatch(body); m != nil {
+		return m[1]
+	}
+	scanner, _, _ := strings.Cut(id, "/")
+	return scanner
+}
+
 // sameBody reports whether two bodies list the same findings, ignoring
 // which commit was scanned.
 func sameBody(a, b string) bool {
@@ -276,7 +295,7 @@ func IssueBody(b group.Batch, links Links) string {
 		quoted[i] = strconv.Quote(f)
 	}
 	var sb strings.Builder
-	fmt.Fprintf(&sb, "<!-- sarifix-batch: %s -->\n", b.ID())
+	fmt.Fprintf(&sb, "<!-- sarifix-batch: %s -->\n<!-- sarifix-scanner: %s -->\n", b.ID(), b.Scanner)
 	fmt.Fprintf(&sb, "## Context\nThe sarifix scan of %s reports %d `%s` finding(s) for `%s` from %s, in %d file(s).%s\n\n",
 		scanned, len(items), b.Level, b.Key, b.Scanner, len(files), help)
 	sb.WriteString("## Task\nFix every finding listed below at its cause, so the scanner no longer reports it. Keep the change to what these findings need.\n\n")

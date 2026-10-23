@@ -20,12 +20,12 @@ The workflow passes `actionlint`. Its `run:` steps were executed against a real 
 
 ## `sarifix-issues.yml`
 
-A workflow that scans the default branch weekly, after every push to `main` and on demand. It uploads the SARIF to GitHub code scanning, then runs `sarifix fix --mode issues` to keep one open issue per batch. Issues are opened, refreshed and closed as the scans change. They're written in the agent-ready format of the [task-queue](https://github.com/rossedman/claude/tree/main/plugins/task-queue) plugin, so Claude can fix them in Actions one pull request at a time.
+The whole setup with the [sarifix GitHub Action](https://rossedman.io/sarifix/action/), in one job. On pushes to `main`, weekly and on demand, it installs sarifix and the scanners `sarifix.yaml` names, scans, uploads to code scanning and keeps one issue per batch (`sarifix fix --mode issues`) in the agent-ready format of the [task-queue](https://github.com/rossedman/claude/tree/main/plugins/task-queue) plugin. On pull requests it reports what the change introduced, in the job summary and as annotations.
 
-Copy it to `.github/workflows/`. `publish.issues` in `sarifix.yaml` sets how many issues may be open at once (`max_open`, default 10). The repository variable **`SARIFIX_QUEUE`** (default 0) sets how many to keep labeled `agent-ready`; above 0, it starts paid agent runs. Try `sarifix fix --mode issues --dry-run` locally first, with `GITHUB_TOKEN` and `GITHUB_REPOSITORY` set, to see what it would do.
+Copy it to `.github/workflows/sarifix.yml`, and pin the action to the tag's commit SHA. `publish.issues.max_open` in `sarifix.yaml` caps how many issues are open at once (default 10). The repository variable **`SARIFIX_QUEUE`** (default 0) sets how many to keep labeled `agent-ready`; above 0, it starts paid agent runs. Add `dry-run: "true"` to the action's `with:` for a first run that changes nothing.
 
 The [tutorial](https://rossedman.io/sarifix/tutorials/claude-queue/) covers the agent side and how to turn it on gradually.
 
 ### How it was tested
 
-The workflow passes `actionlint` and `zizmor`. Its `run:` steps were executed against a test repository with eight scanners, with `RUNNER_TEMP` and the Actions variables set by hand and an in-memory stand-in for the GitHub API. Three sync runs covered opening issues, an idempotent re-run, closing a fixed batch and refreshing a changed one. The `uses:` steps are pinned to commit SHAs but haven't run together on GitHub yet.
+The workflow and the action pass `actionlint` and `zizmor`, and the action's scripts pass `shellcheck` and `shfmt`. CI runs the action from the checkout on every change (scan, issues in dry-run mode, check on pull requests). Locally, its install step installed all eight scanners from a clean `PATH`, checking each against its release's checksums. Its scan, issues and check scripts ran against a test repository, with the Actions variables set by hand and a stand-in for the GitHub API. `sarifix-pr.yml` above is the same pull request check, built by hand.

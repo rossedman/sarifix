@@ -38,6 +38,8 @@ The GitHub forge layer, PR publishing, a JSONL state store, `action.yml` and exa
 
 **Done when**, on a sandbox GitHub repo, a push to main produces scan, fix and one PR per rule batch, re-running produces no duplicate PRs, and workflow files are never modified.
 
+Shipped early: [`action.yml`](action.md) and the example workflow, plus a minimal GitHub client for [issues mode](guides/modes.md#issues), which opens one issue per batch for Claude or a person to fix instead of having sarifix open the PR. See [ADR 7](adr/0007-issues-mode.md).
+
 ## Phase 4: Review mode and agent hook
 
 `--mode review` with baseline diff and suggested changes, and a documented Claude Code hook.

@@ -142,6 +142,50 @@ jobs:
       - name: Integration tests
         run: go test -tags integration -count=1 ./test/integration/
 
+  # The GitHub Action (action.yml) as users run it, with sarifix built from
+  # this commit: scan, issues in dry-run mode, and check on pull requests.
+  action:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      issues: read # issues mode's dry run lists them
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0 # check mode needs the merge base
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+      - name: Build sarifix from this commit
+        run: |
+          go build -o "$RUNNER_TEMP/bin/sarifix" ./cmd/sarifix
+          echo "$RUNNER_TEMP/bin" >>"$GITHUB_PATH"
+      - uses: ./
+        id: scan
+        with:
+          install: "false"
+          mode: scan
+          config: testdata/action/sarifix.yaml
+          upload-sarif: "false"
+      - name: The scan wrote SARIF
+        env:
+          DIR: ${{ steps.scan.outputs.sarif-dir }}
+        run: test -s "$DIR/trivy.sarif"
+      - uses: ./
+        with:
+          install: "false"
+          mode: issues
+          config: testdata/action/sarifix.yaml
+          upload-sarif: "false"
+          dry-run: "true"
+      - uses: ./
+        if: github.event_name == 'pull_request'
+        with:
+          install: "false"
+          config: testdata/action/sarifix.yaml
+
   release-snapshot:
     name: goreleaser snapshot
     runs-on: ubuntu-latest

@@ -14,7 +14,9 @@ import (
 	"github.com/rossedman/sarifix/pkg/config"
 	"github.com/rossedman/sarifix/pkg/group"
 	"github.com/rossedman/sarifix/pkg/plan"
+	"github.com/rossedman/sarifix/pkg/policy"
 	"github.com/rossedman/sarifix/pkg/publish"
+	"github.com/rossedman/sarifix/pkg/sarif"
 )
 
 // init registers the fix command.
@@ -85,7 +87,7 @@ Modes:
 				return err
 			}
 			if mode == "issues" {
-				return a.fixIssues(cmd, p, iss)
+				return a.fixIssues(cmd, p, log, iss)
 			}
 			repo, err := a.repo()
 			if err != nil {
@@ -122,7 +124,7 @@ Modes:
 }
 
 // fixIssues syncs one GitHub issue per batch and reports what changed.
-func (a *app) fixIssues(cmd *cobra.Command, p *plan.Plan, f issueFlags) error {
+func (a *app) fixIssues(cmd *cobra.Command, p *plan.Plan, log *sarif.Log, f issueFlags) error {
 	l, err := a.loadConfig(config.ValidateOptions{})
 	if err != nil {
 		return err
@@ -162,8 +164,15 @@ func (a *app) fixIssues(cmd *cobra.Command, p *plan.Plan, f issueFlags) error {
 		}
 	}
 	batches := append(append([]group.Batch(nil), p.Batches.Run...), p.Batches.Deferred...)
+	scanned := scannedBy(l.Config, log)
+	for _, s := range l.Scanners {
+		if !scanned[s.Name] {
+			a.log.Warn("no SARIF from this scanner, so its issues stay open", "scanner", s.Name)
+		}
+	}
 	actions, err := publish.Issues(ctx, gh, batches, publish.IssuesOptions{
-		Label: cfg.Label, MaxOpen: cfg.MaxOpen, Queue: cfg.Queue, QueueLabel: cfg.QueueLabel, Links: links, DryRun: f.dryRun,
+		Label: cfg.Label, MaxOpen: cfg.MaxOpen, Queue: cfg.Queue, QueueLabel: cfg.QueueLabel, Links: links,
+		Scanned: scanned, DryRun: f.dryRun,
 	})
 	if a.jsonOut() {
 		if err != nil {
@@ -174,6 +183,18 @@ func (a *app) fixIssues(cmd *cobra.Command, p *plan.Plan, f issueFlags) error {
 	// On error, still show what was done before it.
 	printIssueActions(a, a.out(), gh.Repo, f.dryRun, len(batches), actions, err == nil)
 	return err
+}
+
+// scannedBy names the configured scanners that have a run in log.
+func scannedBy(cfg *config.Config, log *sarif.Log) map[string]bool {
+	pol := policy.New(cfg, policy.Options{})
+	out := map[string]bool{}
+	for _, r := range log.Runs {
+		if name, ok := pol.Route(r.Driver()); ok {
+			out[name] = true
+		}
+	}
+	return out
 }
 
 // nonNilActions returns as, or an empty list, so JSON shows [] not null.

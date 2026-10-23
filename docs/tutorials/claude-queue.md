@@ -13,29 +13,26 @@ flowchart LR
 
 ## What you need
 
-- sarifix v0.3.0 or later, the first release with `--mode issues`.
+- sarifix v0.3.0 or later, the first release with `--mode issues` and the GitHub Action.
 - A repository with a `sarifix.yaml` whose `rules.allow` lists the rules you want fixed. Only allowed rules become issues: that list is the fixing policy, and everything else is still scanned and uploaded.
 - The [task-queue](https://github.com/rossedman/claude/tree/main/plugins/task-queue) Claude Code plugin, for the agent side. Its `agent-queue.yml` turns an `agent-ready` issue into a pull request.
 - For the code scanning upload on a private repository, GitHub Code Security. Without it, delete the upload step; the issues don't depend on it.
 
-## 1. Add the scan workflow
+## 1. Add the workflow
 
-Copy [`examples/workflows/sarifix-issues.yml`](https://github.com/rossedman/sarifix/blob/main/examples/workflows/sarifix-issues.yml) to `.github/workflows/sarifix-issues.yml` in your repository:
+Save this as `.github/workflows/sarifix.yml`. It's [`examples/workflows/sarifix-issues.yml`](https://github.com/rossedman/sarifix/blob/main/examples/workflows/sarifix-issues.yml) in the sarifix repository:
 
 ```yaml
 --8<-- "examples/workflows/sarifix-issues.yml"
 ```
 
-How it fits together:
+The [sarifix GitHub Action](../action.md) does the rest:
 
-- **Nothing is committed.** The SARIF files are written to the runner's temp directory and uploaded to code scanning. The issues are the durable record. See [Where SARIF files live](../guides/sarif-files.md).
-- **When it runs.** Weekly, on demand, and after every push to `main`. The push run is what closes an issue once its fix merges, and queues the next one.
-- **Scan output stays outside the checkout** (`$RUNNER_TEMP`). Otherwise a secrets scanner finds the secrets quoted in the other scanners' SARIF files.
-- **Code scanning** gets the per-scanner SARIF files. Alerts show in the Security tab and on pull request diffs, and they close by themselves when a later scan stops reporting them.
-- **`sarifix fix --mode issues`** plans the batches the same way `plan` and report mode do, then syncs them to issues through the GitHub API with the job's `GITHUB_TOKEN`. It reads the repository, API URL and commit from the variables Actions sets.
-- **Scanner versions are pinned.** A new scanner release adds rules, and those would arrive as a wave of new issues. Bump the versions on purpose.
-
-The scanners installed are Trivy and Checkov. Add install steps for whatever your `sarifix.yaml` runs; the [README](https://github.com/rossedman/sarifix#scanners) has entries for eight tools.
+- **It installs sarifix and your scanners.** It downloads the release matching the action's tag and checks it against the release's checksums. Then it installs each scanner `sarifix.yaml` names that it knows (Trivy, Checkov, golangci-lint, ruff, Semgrep, Gitleaks, hadolint and tfmetrics), at pinned versions. A new scanner release adds rules, which would arrive as a wave of new issues, so versions only change when the action is bumped. Anything you install yourself in an earlier step is left alone.
+- **It scans into `$RUNNER_TEMP`**, outside the checkout, so a secrets scanner doesn't find the secrets quoted in other scanners' SARIF. Nothing is committed. See [Where SARIF files live](../guides/sarif-files.md).
+- **It uploads to code scanning.** Alerts show in the Security tab and on pull request diffs, and they close by themselves when a later scan stops reporting them.
+- **It runs `sarifix fix --mode issues`**, which plans batches the same way `plan` and report mode do, then syncs them to issues with the job's token. Each run's changes go to the job summary.
+- **When it runs:** weekly, on demand, and after every push to `main`. The push run is what closes an issue once its fix merges, and queues the next one. On pull requests the same workflow reports what the change introduced instead.
 
 ## 2. What issues mode does with the batches
 
@@ -43,7 +40,7 @@ The scanners installed are Trivy and Checkov. Add install steps for whatever you
 
 1. **Creates** issues for the most severe batches, up to `publish.issues.max_open` open at once (default 10). A backlog of 200 batches arrives ten at a time, not all at once.
 2. **Updates** an open issue when its findings change, unless it's labeled `agent-working`. A new commit alone doesn't count as a change.
-3. **Closes** an issue, with a comment, when the scan no longer reports its batch.
+3. **Closes** an issue, with a comment, when the scan no longer reports its batch. Only scanners that produced SARIF in this run can close issues, so a failed scanner leaves its issues open.
 4. **Queues** the most severe open issues by labeling them `publish.issues.queue_label` (`agent-ready`), until `publish.issues.queue` are queued or in progress. It skips issues labeled `agent-failed`. The default is 0, so nothing is queued.
 
 The settings live in `sarifix.yaml`, and `--max-open` and `--queue` override them for one run:
@@ -107,24 +104,16 @@ Set up the queue with the task-queue plugin. In Claude Code, in your repository:
 
 That writes `.github/workflows/agent-queue.yml`, creates the `agent-ready`, `agent-working` and `agent-failed` labels, and walks you through adding the `ANTHROPIC_API_KEY` secret. Then make two changes to `agent-queue.yml`, so Claude can run the issue's **Done when** commands:
 
-1. **Install sarifix and your scanners** before the `Implement` step, the same way the scan workflow does:
+1. **Install sarifix and your scanners** before the `Implement` step, with the action in install mode:
 
     ```yaml
-    - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+    - uses: rossedman/sarifix@v0.3.0 # pin the tag's commit SHA
       if: steps.pick.outputs.number != ''
       with:
-        go-version: stable
-        cache: false
-    - uses: aquasecurity/setup-trivy@81e514348e19b6112ce2a7e3ecbafe19c1e1f567 # v0.3.1
-      if: steps.pick.outputs.number != ''
-      with:
-        version: v0.76.1
-    - name: Install sarifix and checkov
-      if: steps.pick.outputs.number != ''
-      run: |
-        go install github.com/rossedman/sarifix/cmd/sarifix@v0.2.0
-        pipx install checkov==3.3.30
+        mode: install
     ```
+
+    If `sarifix.yaml` runs golangci-lint, add `actions/setup-go` before it.
 
 2. **Allow the commands** by adding `Bash(sarifix:*)` and `Bash(jq:*)` to the action's `--allowedTools`:
 
@@ -135,11 +124,11 @@ That writes `.github/workflows/agent-queue.yml`, creates the `agent-ready`, `age
 Now label an issue `agent-ready`, by hand or with `SARIFIX_QUEUE`, and Claude picks it up.
 
 !!! note "Labels added by the scan don't start a run on their own"
-    GitHub doesn't start workflows from events made with `GITHUB_TOKEN`, so an `agent-ready` label added by the scan workflow doesn't trigger `agent-queue.yml`'s `issues: labeled` event. The queue's nightly schedule picks up the oldest `agent-ready` issue instead. A label you add yourself starts a run immediately.
+    GitHub doesn't start workflows from events made with `GITHUB_TOKEN`, so an `agent-ready` label added by the sarifix workflow doesn't trigger `agent-queue.yml`'s `issues: labeled` event. The queue's nightly schedule picks up the oldest `agent-ready` issue instead. A label you add yourself starts a run immediately.
 
 ## 4. Turn it on gradually
 
-1. **Report only.** Run the scan workflow from the Actions tab, then read the issues it opened. If an issue lists findings you won't fix, deny the rule (`rules.deny`) or narrow `rules.allow`. The next run closes those issues.
+1. **Report only.** To preview, set `dry-run: "true"` on the action and run the workflow from the Actions tab: the job summary lists the issues it would open. Then remove it, run it again, and read the issues it opened. If an issue lists findings you won't fix, deny the rule (`rules.deny`) or narrow `rules.allow`. The next run closes those issues.
 2. **Queue by hand.** Label one issue `agent-ready`, then review the pull request Claude opens. The issue's acceptance criteria are the review checklist.
 3. **Queue automatically.** Set the repository variable `SARIFIX_QUEUE` to `1`. From then on, each push to `main` and each weekly run keeps one batch in flight: the nightly queue run fixes it, you review and merge, and the push scan queues the next.
 
@@ -147,13 +136,13 @@ Agent pull requests still go through your branch rulesets, so they need review a
 
 ## How it was tested
 
-- The workflow passes `actionlint` and `zizmor`.
+- The workflow and the action pass `actionlint` and `zizmor`, and the action's scripts pass `shellcheck`. CI runs the action from the checkout on every change: scan, issues in dry-run mode, and check on pull requests.
 - Its `run:` steps were executed with `RUNNER_TEMP` and the Actions variables set by hand, against a test repository running the eight scanners from the README, with an in-memory stand-in for the GitHub API. Three sync runs were checked:
   - the first opened 10 issues (`max_open`) out of 24 batches and queued the most severe one;
   - a second run with the same findings and a new commit changed nothing (`✓ acme/infra issues already match 24 batches`);
   - after a module was pinned to a commit, the next run closed the batch that went away (with a comment), refreshed the one whose findings changed, and opened the next batch in the freed slot.
 - One generated issue was handed to Claude (Sonnet, with the queue's tool limits plus `sarifix` and `jq`). It fixed the finding, ran the **Done when** commands until they passed and committed, in 8 turns for $0.10.
-- The `uses:` steps (checkout, setup-go, setup-trivy, upload-sarif) are standard actions pinned to commit SHAs, but haven't yet run together on GitHub.
+- The action's install step was run from a clean `PATH` on Linux x64: all eight scanners downloaded, verified against their checksums and ran. Its scan, issues and check scripts ran against a test repository, with the Actions variables set by hand and a stand-in for the GitHub API.
 - Issues mode itself is tested against an in-memory GitHub API: creating, refreshing, closing and queueing issues, dry runs, API errors, and links from Actions' variables or the checkout's `HEAD`.
 
 ## Safety
