@@ -6,26 +6,21 @@ Scan the default branch in GitHub Actions, upload the results to code scanning, 
 flowchart LR
   A[push to main / weekly] --> B[sarifix scan]
   B --> C[upload-sarif<br>code scanning]
-  B --> D[sarifix fix --mode report]
-  D --> E[sarifix_issues.py<br>one issue per batch]
-  E -->|agent-ready| F[agent-queue.yml<br>Claude fixes, opens PR]
+  B --> D[sarifix fix --mode issues<br>one issue per batch]
+  D -->|agent-ready| F[agent-queue.yml<br>Claude fixes, opens PR]
   F -->|merge| A
 ```
 
 ## What you need
 
+- sarifix v0.3.0 or later, the first release with `--mode issues`.
 - A repository with a `sarifix.yaml` whose `rules.allow` lists the rules you want fixed. Only allowed rules become issues: that list is the fixing policy, and everything else is still scanned and uploaded.
 - The [task-queue](https://github.com/rossedman/claude/tree/main/plugins/task-queue) Claude Code plugin, for the agent side. Its `agent-queue.yml` turns an `agent-ready` issue into a pull request.
 - For the code scanning upload on a private repository, GitHub Code Security. Without it, delete the upload step; the issues don't depend on it.
 
 ## 1. Add the scan workflow
 
-Copy two files from the sarifix repository into yours:
-
-| From | To |
-| --- | --- |
-| [`examples/workflows/sarifix-issues.yml`](https://github.com/rossedman/sarifix/blob/main/examples/workflows/sarifix-issues.yml) | `.github/workflows/sarifix-issues.yml` |
-| [`examples/workflows/sarifix_issues.py`](https://github.com/rossedman/sarifix/blob/main/examples/workflows/sarifix_issues.py) | `.github/scripts/sarifix_issues.py` |
+Copy [`examples/workflows/sarifix-issues.yml`](https://github.com/rossedman/sarifix/blob/main/examples/workflows/sarifix-issues.yml) to `.github/workflows/sarifix-issues.yml` in your repository:
 
 ```yaml
 --8<-- "examples/workflows/sarifix-issues.yml"
@@ -33,25 +28,36 @@ Copy two files from the sarifix repository into yours:
 
 How it fits together:
 
-- **Nothing is committed.** The SARIF files are written to the runner's temp directory, uploaded to code scanning and kept as an artifact. The issues are the durable record. See [Where SARIF files live](../guides/sarif-files.md).
+- **Nothing is committed.** The SARIF files are written to the runner's temp directory and uploaded to code scanning. The issues are the durable record. See [Where SARIF files live](../guides/sarif-files.md).
 - **When it runs.** Weekly, on demand, and after every push to `main`. The push run is what closes an issue once its fix merges, and queues the next one.
 - **Scan output stays outside the checkout** (`$RUNNER_TEMP`). Otherwise a secrets scanner finds the secrets quoted in the other scanners' SARIF files.
 - **Code scanning** gets the per-scanner SARIF files. Alerts show in the Security tab and on pull request diffs, and they close by themselves when a later scan stops reporting them.
-- **`sarifix fix --mode report`** writes `summary.json` (the batches, most severe first) and `sarifix.sarif` (every finding tagged with its batch and fingerprint). The script reads both.
+- **`sarifix fix --mode issues`** plans the batches the same way `plan` and report mode do, then syncs them to issues through the GitHub API with the job's `GITHUB_TOKEN`. It reads the repository, API URL and commit from the variables Actions sets.
 - **Scanner versions are pinned.** A new scanner release adds rules, and those would arrive as a wave of new issues. Bump the versions on purpose.
 
 The scanners installed are Trivy and Checkov. Add install steps for whatever your `sarifix.yaml` runs; the [README](https://github.com/rossedman/sarifix#scanners) has entries for eight tools.
 
-## 2. What the script does with the batches
+## 2. What issues mode does with the batches
 
-`sarifix_issues.py` keeps one open issue per batch, matched by a hidden `<!-- sarifix-batch: ... -->` marker, so you can retitle issues freely. On each run it:
+`sarifix fix --mode issues` keeps one open issue per batch, matched by a hidden `<!-- sarifix-batch: ... -->` marker, so you can retitle issues freely. Issues without the marker, or without the `publish.issues.label` label, are never touched. On each run it:
 
-1. **Creates** issues for the most severe batches, up to `SARIFIX_MAX_OPEN` open at once (default 10). A backlog of 200 batches arrives ten at a time, not all at once.
+1. **Creates** issues for the most severe batches, up to `publish.issues.max_open` open at once (default 10). A backlog of 200 batches arrives ten at a time, not all at once.
 2. **Updates** an open issue when its findings change, unless it's labeled `agent-working`. A new commit alone doesn't count as a change.
 3. **Closes** an issue, with a comment, when the scan no longer reports its batch.
-4. **Queues** the most severe open issues by labeling them `agent-ready`, until `SARIFIX_QUEUE` are queued or in progress. The default is 0, so nothing is queued.
+4. **Queues** the most severe open issues by labeling them `publish.issues.queue_label` (`agent-ready`), until `publish.issues.queue` are queued or in progress. It skips issues labeled `agent-failed`. The default is 0, so nothing is queued.
 
-Run it with `--dry-run` to see what it would do without changing anything.
+The settings live in `sarifix.yaml`, and `--max-open` and `--queue` override them for one run:
+
+```yaml
+publish:
+  issues:
+    label: sarifix          # every batch issue carries it
+    max_open: 10
+    queue: 0                # the workflow passes $SARIFIX_QUEUE as --queue
+    queue_label: agent-ready
+```
+
+Run it with `--dry-run` to see what it would do without changing anything. It prints one line per change (`✓ opened #12 trivy/AWS-0086`), and `--json` gives the same as a list of actions.
 
 Each issue follows task-queue's agent-ready format. Here is one the workflow's steps created on a test repository:
 
@@ -142,15 +148,16 @@ Agent pull requests still go through your branch rulesets, so they need review a
 ## How it was tested
 
 - The workflow passes `actionlint` and `zizmor`.
-- Its `run:` steps were executed with `RUNNER_TEMP` set by hand, against a test repository running the eight scanners from the README, with a fake `gh` that kept issue state in a file. Three sync runs were checked:
-  - the first created 10 issues and queued the most severe one;
-  - a second run with the same findings and a new commit changed nothing;
-  - after one batch was fixed, the next run closed its issue, refreshed the rest and queued the next.
+- Its `run:` steps were executed with `RUNNER_TEMP` and the Actions variables set by hand, against a test repository running the eight scanners from the README, with an in-memory stand-in for the GitHub API. Three sync runs were checked:
+  - the first opened 10 issues (`max_open`) out of 24 batches and queued the most severe one;
+  - a second run with the same findings and a new commit changed nothing (`✓ acme/infra issues already match 24 batches`);
+  - after a module was pinned to a commit, the next run closed the batch that went away (with a comment), refreshed the one whose findings changed, and opened the next batch in the freed slot.
 - One generated issue was handed to Claude (Sonnet, with the queue's tool limits plus `sarifix` and `jq`). It fixed the finding, ran the **Done when** commands until they passed and committed, in 8 turns for $0.10.
-- The `uses:` steps (checkout, setup-go, setup-trivy, upload-sarif, upload-artifact) are standard actions pinned to commit SHAs, but haven't yet run together on GitHub.
+- The `uses:` steps (checkout, setup-go, setup-trivy, upload-sarif) are standard actions pinned to commit SHAs, but haven't yet run together on GitHub.
+- Issues mode itself is tested against an in-memory GitHub API: creating, refreshing, closing and queueing issues, dry runs, API errors, and links from Actions' variables or the checkout's `HEAD`.
 
 ## Safety
 
 - **Labeling is the approval step.** Only people with triage access can add labels, and `SARIFIX_QUEUE` defaults to 0, so nothing spends API money until you opt in.
-- **Issue text goes into Claude's context.** The script collapses scanner messages to one line, caps them at 300 characters, strips HTML comment markers so a message can't fake the batch marker, and labels them as data. The repository being scanned is your own default branch.
+- **Issue text goes into Claude's context.** Issues mode collapses scanner messages to one line, caps them at 300 characters, escapes `<` so a message can't open an HTML comment and fake the batch marker, defuses `@mentions` so a message can't notify anyone, and labels the messages as data. The repository being scanned is your own default branch.
 - **Least privilege.** The scan job can write issues and code scanning alerts, but has no `contents: write` and no secrets. Only the queue job can push, and it pushes to branches that rulesets protect.

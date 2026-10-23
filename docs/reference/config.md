@@ -106,6 +106,7 @@ How verified fixes are published.
 | --- | --- | --- | --- |
 | `publish.pr` | object | none | Settings for --mode pr. |
 | `publish.review` | object | none | Settings for --mode review. |
+| `publish.issues` | object | none | Settings for --mode issues. |
 
 ### `publish.pr`
 
@@ -125,3 +126,14 @@ Settings for --mode review.
 | Key | Type | Default | Description |
 | --- | --- | --- | --- |
 | `publish.review.max_suggestions` | int | `20` | Most suggested changes in one review. |
+
+### `publish.issues`
+
+Settings for --mode issues.
+
+| Key | Type | Default | Description |
+| --- | --- | --- | --- |
+| `publish.issues.label` | string | `sarifix` | Label on every batch issue; sarifix only manages issues that carry it. |
+| `publish.issues.max_open` | int | `10` | Most batch issues open at once, the most severe batches first. |
+| `publish.issues.queue` | int | `0` | How many issues to keep labeled queue_label for an agent; 0 queues none. |
+| `publish.issues.queue_label` | string | `agent-ready` | Label that hands an issue to an agent queue. |

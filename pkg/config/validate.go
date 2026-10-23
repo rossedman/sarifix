@@ -253,6 +253,21 @@ func (v *validator) publish() {
 	if v.l.Publish.Review.MaxSuggestions < 0 {
 		v.add("publish.review.max_suggestions", "must not be negative")
 	}
+	is := v.l.Publish.Issues
+	for _, l := range []struct{ key, name string }{{"publish.issues.label", is.Label}, {"publish.issues.queue_label", is.QueueLabel}} {
+		if strings.TrimSpace(l.name) == "" || strings.Contains(l.name, ",") || len(l.name) > 50 {
+			v.add(l.key, "must be a GitHub label name (1 to 50 characters, no commas), got %q", l.name)
+		}
+	}
+	if is.Label == is.QueueLabel {
+		v.add("publish.issues.queue_label", "must differ from publish.issues.label")
+	}
+	if is.MaxOpen < 1 {
+		v.add("publish.issues.max_open", "must be at least 1")
+	}
+	if is.Queue < 0 || is.Queue > is.MaxOpen {
+		v.add("publish.issues.queue", "must be between 0 and max_open (%d), got %d", is.MaxOpen, is.Queue)
+	}
 }
 
 // listIndex matches a leading "scanners[N]" or "campaigns[N]".

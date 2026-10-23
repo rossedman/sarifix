@@ -154,6 +154,31 @@ scanners:
   - name: b
     command: [""]
 `, false, []string{"x.yaml:5: scanners[0].command: must not be empty", "x.yaml:7: scanners[1].command: must not be empty"}},
+		{"issues labels", `
+version: 1
+publish:
+  issues:
+    label: "a,b"
+    queue_label: "a,b"
+    max_open: 0
+    queue: 2
+`, false, []string{
+			`publish.issues.label: must be a GitHub label name (1 to 50 characters, no commas), got "a,b"`,
+			`publish.issues.queue_label: must be a GitHub label name`,
+			"publish.issues.queue_label: must differ from publish.issues.label",
+			"publish.issues.max_open: must be at least 1",
+			"publish.issues.queue: must be between 0 and max_open (0), got 2",
+		}},
+		{"issues blank label and negative queue", `
+version: 1
+publish:
+  issues:
+    label: " "
+    queue: -1
+`, false, []string{
+			`publish.issues.label: must be a GitHub label name (1 to 50 characters, no commas), got " "`,
+			"publish.issues.queue: must be between 0 and max_open (10), got -1",
+		}},
 		{"unknown campaign scanner", `
 version: 1
 campaigns:

@@ -27,6 +27,6 @@ Install sarifix (see [Getting started](../getting-started.md)) and the scanners 
 Other versions work. Their rules and counts will differ from the output shown here.
 
 !!! note "What these tutorials cover"
-    sarifix fixes nothing yet: the agent and the `local`, `pr` and `review` modes arrive in later [phases](../roadmap.md). These tutorials cover everything that runs today, namely scanning, fingerprints and diffs, the policy, batching, and report mode. Those decide what a fix run will do once fixing lands.
+    sarifix doesn't run a fixing agent itself yet: the `local`, `pr` and `review` modes arrive in later [phases](../roadmap.md). Claude fixes findings today through the [Stop hook](claude-code-hook.md) and through [issues mode](claude-queue.md). These tutorials cover everything that runs today, namely scanning, fingerprints and diffs, the policy, batching, and the report and issues modes. Those decide what a fix run will do once fixing lands.
 
 Each tutorial writes scan output into the repository (`sarif/`, `sarifix-report/`). In a repository of your own, add both to `.gitignore`: SARIF files are regenerated on every run and never committed. See [Where SARIF files live](../guides/sarif-files.md).

@@ -1,13 +1,14 @@
 # Modes
 
-sarifix has four modes. They run the same pipeline and differ only in what triggers them, which findings they look at, and where the result goes.
+sarifix has five modes. They run the same pipeline and differ only in what triggers them, which findings they look at, and where the result goes.
 
-!!! warning "Only report mode is shipped"
-    `report` works today. `local`, `pr` and `review` arrive in phases 2 to 4 of the [roadmap](../roadmap.md); asking for one now exits with an error naming its phase. Their sections describe the design so you can see where the project is heading.
+!!! warning "Report and issues modes are shipped"
+    `report` and `issues` work today. `local`, `pr` and `review` arrive in phases 2 to 4 of the [roadmap](../roadmap.md); asking for one now exits with an error naming its phase. Their sections describe the design so you can see where the project is heading.
 
 | Mode | Trigger | Publishes | Typical use | Phase |
 | --- | --- | --- | --- | --- |
 | `report` | Anything | Enriched SARIF and a JSON summary. No edits. | Dry runs, triage, metrics | 1 |
+| `issues` | A scan of the default branch | One GitHub issue per batch, for a person or an agent queue to fix | Backlog burn-down with Claude in Actions | 1 |
 | `local` | CLI or an agent hook | Edits in your working tree. No git operations. | Laptop use, Claude Code hooks | 2 |
 | `pr` | A scan of the default branch | One PR per rule batch | Backlog burn-down, migrations, CVE response | 3 |
 | `review` | A scan of a pull request | Suggested-change comments on that PR | PR assist | 4 |
@@ -57,6 +58,22 @@ Checks run in this order, and a finding gets the first reason that applies:
 | `rule_not_allowed` | Not in `rules.allow` and not in a campaign. |
 | `path_denied` | The file matches `paths.deny` (which always includes `.github/workflows/**`). |
 | `not_selected` | Excluded by `--rule` or `--campaign`. |
+
+## issues
+
+Writes no code either. It plans batches exactly as report mode does, then keeps one open GitHub issue per batch, in the agent-ready format of the [task-queue](https://github.com/rossedman/claude/tree/main/plugins/task-queue) plugin: the findings with links to their lines, acceptance criteria, the commands that prove a fix, and what is out of scope.
+
+```console
+$ sarifix fix --mode issues --sarif 'sarif/*.sarif' --queue 1
+✓ opened #1 checkov/CKV_TF_1
+✓ opened #2 checkov/CKV2_AWS_6
+...
+✓ queued #1 checkov/CKV_TF_1
+```
+
+Each run opens issues for the most severe batches up to `publish.issues.max_open`, refreshes an issue whose findings changed (unless it's labeled `agent-working`), closes an issue whose batch is no longer reported, and labels the most severe open issues `publish.issues.queue_label` until `publish.issues.queue` are queued or in progress. Issues are matched to batches by a hidden `<!-- sarifix-batch: ... -->` marker, and sarifix never touches an issue without both the marker and `publish.issues.label`.
+
+It needs a token that can write issues (`GITHUB_TOKEN`, else `GH_TOKEN`) and the repository (`GITHUB_REPOSITORY`, or `--github-repo`). Links use `GITHUB_SERVER_URL` and `GITHUB_SHA` when set, else github.com and the checkout's `HEAD`. `--dry-run` prints what would change without writing. [Turn findings into issues Claude works through](../tutorials/claude-queue.md) sets it up in GitHub Actions.
 
 ## local
 

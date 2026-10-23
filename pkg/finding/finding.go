@@ -506,6 +506,22 @@ func hasContent(s string) bool {
 	return strings.TrimFunc(s, unicode.IsSpace) != ""
 }
 
+// Help picks the most useful pointer for fixing f: the rule's docs link,
+// else the first line of its help text when that says more than the
+// message. Scanners' help text is often rule-level boilerplate (Trivy's is a
+// markdown table) or names another resource (Checkov's), so a link is
+// preferred.
+func (f Finding) Help() string {
+	if f.HelpURI != "" {
+		return f.HelpURI
+	}
+	line, _, _ := strings.Cut(strings.TrimSpace(f.HelpText), "\n")
+	if CollapseSpace(line) == CollapseSpace(f.Message) {
+		return ""
+	}
+	return line
+}
+
 // CollapseSpace trims s and replaces every whitespace run with one space.
 func CollapseSpace(s string) string {
 	var b strings.Builder

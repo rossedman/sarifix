@@ -32,6 +32,7 @@ Solid arrows follow the data; dotted ones are helper libraries.
 | `internal/cli` | Cobra commands, flags, viper settings, human and JSON output. One command per file. | `Execute`, `NewRoot` |
 | `internal/ui` | Every terminal style (lipgloss), the fang help theme, the `slog` handler, and `Sanitize` for untrusted text | `NewStyles`, `Sanitize`, `NewLogger` |
 | `internal/version` | Build information injected with `-ldflags` | `Get` |
+| `internal/github` | A minimal GitHub REST client for issues mode: list, create, edit, comment, label. Implements `publish.Tracker` | `FromEnv` |
 | `internal/gitrepo` | The few git commands `check` needs: repo root, git directory, resolving a revision, temporary worktrees | `Root`, `Resolve`, `AddWorktree` |
 | `pkg/config` | `sarifix.yaml`: schema, defaults, `--org-config` layering, validation with file:line errors | `LoadLayered`, `(*Loaded).Validate` |
 | `pkg/scanner` | Runs a configured scanner as a subprocess (no shell, own process group, timeout) and routes SARIF runs by tool name | `NewExec(...).Scan`, `(*Registry).Route` |
@@ -41,7 +42,7 @@ Solid arrows follow the data; dotted ones are helper libraries.
 | `pkg/policy` | Judges each finding against the rules and gives skipped ones a reason | `New(...).Apply` |
 | `pkg/group` | Batches fixable findings per rule or campaign, splits by limits, orders and caps; names branches | `Batches`, `Slug` |
 | `pkg/plan` | Runs policy and grouping and records one status per finding | `Build`, `(*Plan).Summarize`, `(*Plan).Annotate` |
-| `pkg/publish` | Mode handlers. Today: report mode (enriched SARIF and a JSON summary) | `Report` |
+| `pkg/publish` | Mode handlers. Today: report mode (enriched SARIF and a JSON summary) and issues mode (one issue per batch, through a `Tracker`) | `Report`, `Issues`, `IssueBody` |
 | `pkg/placeholder` | Expands `{out}`, `{outdir}`, `{dir}`, `{paths}` and `{repo}` in argv templates | `ExpandArgs`, `Unknown` |
 | `pkg/glob` | Path globs (`**`, segment-bound `*`) and rule-key globs (`*` crosses `/`) | `MatchPath`, `MatchKey` |
 
@@ -61,7 +62,7 @@ Solid arrows follow the data; dotted ones are helper libraries.
 1. Load config, then `sarif.LoadGlobs` reads the SARIF. A run that fails schema validation is skipped with a warning; the others load.
 2. `finding.Extractor.Extract` produces findings. Paths are normalized by `sarif.Normalizer`, which resolves `uriBaseId` chains, strips the repo root or a CI workspace root, and rejects anything outside the repo.
 3. `plan.Build` runs `policy.Apply`, then `group.Batches`, and records a status for every finding: `batched`, `deferred` or `skipped` with a reason.
-4. `plan` prints the result. `fix --mode report` calls `publish.Report`, which patches `properties.sarifix` into every finding's SARIF result and writes `summary.json`.
+4. `plan` prints the result. `fix --mode report` calls `publish.Report`, which patches `properties.sarifix` into every finding's SARIF result and writes `summary.json`. `fix --mode issues` passes the batches to `publish.Issues` with an `internal/github` client.
 
 ### `sarifix check`
 

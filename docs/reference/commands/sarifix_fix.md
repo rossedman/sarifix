@@ -6,7 +6,7 @@ title: sarifix fix
 
 ## sarifix fix
 
-Run the fix pipeline (report mode today)
+Run the fix pipeline (report and issues modes today)
 
 ### Synopsis
 
@@ -15,6 +15,11 @@ Run the full pipeline: ingest SARIF, filter, group, fix, verify, publish.
 Modes:
   report  write enriched SARIF (properties.sarifix on every finding, with
           its status, reason and batch) and a JSON summary; no edits
+  issues  keep one GitHub issue per batch, in the agent-ready format: open
+          new ones (up to publish.issues.max_open), refresh changed ones,
+          close fixed ones, and label publish.issues.queue of them for an
+          agent queue; needs GITHUB_TOKEN and GITHUB_REPOSITORY (or
+          --github-repo)
   local   leave verified fixes in the working tree (phase 2, planned)
   pr      open one PR per batch (phase 3, planned)
   review  post suggested changes on a PR (phase 4, planned)
@@ -28,6 +33,8 @@ sarifix fix [flags]
 ```
   sarifix fix --mode report --sarif 'sarif/*.sarif'
   sarifix fix --mode report --sarif 'sarif/*.sarif' --out-dir out/ --json
+  sarifix fix --mode issues --sarif 'sarif/*.sarif' --dry-run
+  sarifix fix --mode issues --sarif 'sarif/*.sarif' --queue 1
 ```
 
 ### Options
@@ -36,9 +43,13 @@ sarifix fix [flags]
       --baseline strings       SARIF of the base scan; findings also in it are skipped
       --baseline-root string   checkout the baseline was scanned in, for SARIF that 'sarifix scan' didn't write (default --repo)
       --campaign string        only findings in this campaign
+      --dry-run                issues mode: print what would change without writing to GitHub
+      --github-repo string     issues mode: owner/name (default $GITHUB_REPOSITORY)
   -h, --help                   help for fix
-      --mode string            report, local, pr or review (default "report")
+      --max-open int           issues mode: most open batch issues (default publish.issues.max_open) (default -1)
+      --mode string            report, issues, local, pr or review (default "report")
       --out-dir string         report mode: directory for sarifix.sarif and summary.json, relative to --repo (default "sarifix-report")
+      --queue int              issues mode: issues to keep labeled for an agent (default publish.issues.queue) (default -1)
       --rule strings           only rule keys matching these globs, like trivy/DS-*
       --sarif strings          SARIF files or globs to read (required)
 ```
