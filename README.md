@@ -70,6 +70,19 @@ sarifix's own CLI settings resolve as **flag > `SARIFIX_*` environment variable 
 
 The full docs live at **<https://rossedman.io/sarifix/>**: [getting started](https://rossedman.io/sarifix/getting-started/), [tutorials](https://rossedman.io/sarifix/tutorials/) on real repositories, [how fingerprints work](https://rossedman.io/sarifix/guides/fingerprints/), the [security model](https://rossedman.io/sarifix/security/) and the [command reference](https://rossedman.io/sarifix/reference/commands/sarifix/).
 
+## Repository layout
+
+| Path | What's there |
+| --- | --- |
+| [`cmd/sarifix`](cmd/sarifix), [`internal/`](internal) | The CLI |
+| [`pkg/`](pkg) | The pipeline, one package per step ([architecture](https://rossedman.io/sarifix/architecture/)) |
+| [`examples/`](examples) | Config, an in-house scanner and a CI workflow to copy from |
+| [`docs/`](docs) | The docs site source |
+| [`testdata/`](testdata), [`test/integration/`](test/integration) | Fixtures from real scanner runs, and end-to-end tests |
+| [`tools/`](tools) | Repo checks and doc generators |
+
+`examples/`, `testdata/`, `test/integration/` and `tools/` each have a README. Go packages document themselves in their package comments (`go doc ./pkg/finding`).
+
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md). `make check` runs everything CI runs. Security reports go through [SECURITY.md](SECURITY.md).

@@ -15,8 +15,9 @@ jobs:
     permissions:
       contents: read
     env:
-      # sarifix has no tagged release yet; pin a commit SHA from
-      # github.com/rossedman/sarifix and bump it on purpose.
+      # v0.1.0 predates `plan` and report mode, which this workflow needs.
+      # Pin a commit SHA from github.com/rossedman/sarifix until the next
+      # release, then that release's tag, and bump it on purpose.
       SARIFIX_REF: main
       TRIVY_VERSION: v0.76.1
       CHECKOV_VERSION: "3.3.30"
