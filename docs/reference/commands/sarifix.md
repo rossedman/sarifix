@@ -34,6 +34,8 @@ Settings precedence: flag > SARIFIX_* environment variable > settings file
 
 * [sarifix config](sarifix_config.md)	 - Inspect and validate sarifix.yaml
 * [sarifix diff](sarifix_diff.md)	 - Print new, fixed and unchanged findings by fingerprint
+* [sarifix fix](sarifix_fix.md)	 - Run the fix pipeline (report mode today)
+* [sarifix plan](sarifix_plan.md)	 - Show the batches a fix run would attempt, and why findings are skipped
 * [sarifix scan](sarifix_scan.md)	 - Run configured scanners and write SARIF
 * [sarifix version](sarifix_version.md)	 - Print version, commit and build date
 

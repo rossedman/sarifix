@@ -2,8 +2,8 @@
 
 sarifix has four modes. They run the same pipeline and differ only in what triggers them, which findings they look at, and where the result goes.
 
-!!! warning "Planned, not shipped"
-    The four modes arrive in phases 1 to 4 of the [roadmap](../roadmap.md). Nothing on this page can be run yet. It describes the design so you can see where the project is heading. What does run today is `scan`, `diff` and `config validate`; see [Getting started](../getting-started.md).
+!!! warning "Only report mode is shipped"
+    `report` works today. `local`, `pr` and `review` arrive in phases 2 to 4 of the [roadmap](../roadmap.md); asking for one now exits with an error naming its phase. Their sections describe the design so you can see where the project is heading.
 
 | Mode | Trigger | Publishes | Typical use | Phase |
 | --- | --- | --- | --- | --- |
@@ -14,7 +14,49 @@ sarifix has four modes. They run the same pipeline and differ only in what trigg
 
 ## report
 
-Writes no code. It runs ingest, fingerprint and filter, then writes the SARIF back out with a `properties.sarifix` block on each result recording its status and the reason it was or was not selected, plus a JSON summary. Use it to see what sarifix would do before you let it do anything, and to feed dashboards. `sarifix plan` shows the same batches without writing files.
+Writes no code. It runs ingest, fingerprint, filter and group, then writes two files to `--out-dir` (default `sarifix-report/`):
+
+- `sarifix.sarif`: every input run, unchanged except that each finding gets a `properties.sarifix` block with its status (`batched`, `deferred` or `skipped`), the skip reason, its batch and the branch a fix would use. It validates against the SARIF 2.1.0 schema, so code scanning and other SARIF viewers still read it.
+- `summary.json`: counts by status and skip reason, and the batches in the order a run would attempt them.
+
+```console
+$ sarifix fix --mode report --sarif 'sarif/*.sarif'
+...
+✓ sarifix-report/sarifix.sarif
+✓ sarifix-report/summary.json
+```
+
+A deferred finding from that run carries:
+
+```json
+"properties": {
+  "sarifix": {
+    "status": "deferred",
+    "scanner": "checkov",
+    "ruleKey": "checkov/CKV_AWS_24",
+    "batch": "checkov/CKV_AWS_24",
+    "branch": "sarifix/checkov/ckv_aws_24",
+    "fingerprint": "fcadca11a498b6d6f0a7012e1e3081fc:1"
+  }
+}
+```
+
+Use it to see what sarifix would do before you let it do anything, and to feed dashboards. [`sarifix plan`](../reference/commands/sarifix_plan.md) shows the same batches without writing files.
+
+### Skip reasons
+
+Checks run in this order, and a finding gets the first reason that applies:
+
+| Reason | Meaning |
+| --- | --- |
+| `unrouted` | No scanner's `match` covers the SARIF tool name. Kept in the report, never fixable. |
+| `no_location` | No file location inside the repo. |
+| `in_baseline` | Also in the `--baseline` scan, so not new. |
+| `below_min_level` | Level is under `rules.min_level`. |
+| `rule_denied` | Matches `rules.deny`. |
+| `rule_not_allowed` | Not in `rules.allow` and not in a campaign. |
+| `path_denied` | The file matches `paths.deny` (which always includes `.github/workflows/**`). |
+| `not_selected` | Excluded by `--rule` or `--campaign`. |
 
 ## local
 

@@ -51,13 +51,13 @@
     <div class="card ship"><span class="chip">Phase 0</span><div class="n">01</div><h3>Ingest</h3><p>Load SARIF 2.1.0, validate, route each run to a scanner by <span class="mono">match</span>.</p></div>
     <div class="card ship"><span class="chip">Phase 0</span><div class="n">02</div><h3>Fingerprint</h3><p>A stable ID per finding. Line numbers never count.</p></div>
     <div class="card ship"><span class="chip">Phase 0</span><div class="n">03</div><h3>Baseline</h3><p>Keep only findings absent from a base scan. <span class="mono">sarifix diff</span> does this today.</p></div>
-    <div class="card plan"><span class="chip">Phase 1</span><div class="n">04</div><h3>Filter</h3><p>Apply rule allow and deny globs, level floor and denied paths.</p></div>
+    <div class="card ship"><span class="chip">Phase 1</span><div class="n">04</div><h3>Filter</h3><p>Apply rule allow and deny globs, level floor and denied paths. <span class="mono">sarifix plan</span> shows why.</p></div>
   </div>
   <div class="row r2">
-    <div class="card plan"><span class="chip">Phase 1</span><div class="n">05</div><h3>Group</h3><p>One batch per rule, split by file and finding caps.</p></div>
+    <div class="card ship"><span class="chip">Phase 1</span><div class="n">05</div><h3>Group</h3><p>One batch per rule, split by file and finding caps.</p></div>
     <div class="card plan"><span class="chip">Phase 2</span><div class="n">06</div><h3>Fix</h3><p>An agent edits a clean worktree. Findings are quoted data.</p></div>
     <div class="card plan"><span class="chip">Phase 2</span><div class="n">07</div><h3>Verify</h3><p>Diff guard, rescan, targets gone, nothing new, tests pass.</p></div>
-    <div class="card plan"><span class="chip">Phase 3-4</span><div class="n">08</div><h3>Publish</h3><p>A PR, review suggestions, local edits or a report.</p></div>
+    <div class="card plan"><span class="chip">Phases 1-4</span><div class="n">08</div><h3>Publish</h3><p>A report today; local edits, a PR or review suggestions next.</p></div>
   </div>
 </div>
 </body></html>

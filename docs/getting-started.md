@@ -3,7 +3,7 @@
 Install sarifix, write a first config, scan a repo, and compare two scans. Everything on this page runs today.
 
 !!! note "What exists today"
-    sarifix is at phase 0. The commands `scan`, `diff`, `config validate` and `version` work. The commands that fix findings (`fix`, `plan`, `doctor`, `stats`) and the four modes are planned; see the [roadmap](roadmap.md).
+    sarifix is at phase 1. The commands `scan`, `diff`, `plan`, `config validate` and `version` work, and so does `fix --mode report`. Fixing code (`fix` in the `local`, `pr` and `review` modes), `doctor` and `stats` are planned; see the [roadmap](roadmap.md).
 
 ## Install
 
@@ -100,6 +100,43 @@ Twenty-six findings moved but are still recognized as the same finding. The two 
 
 `--repo` is the checkout of the head commit and `--base-root` the checkout of the base commit. sarifix reads source lines from them when the SARIF has no snippet. Add `--unchanged` to list the unchanged findings too, or `--json` for machine output.
 
+## Plan a fix run
+
+`sarifix plan` applies your rules and shows the batches a fix run would attempt, without calling an agent. With the [example config](https://github.com/rossedman/sarifix/blob/main/examples/sarifix.yaml) on the fixture repo:
+
+```console
+$ sarifix plan --sarif 'sarif/*.sarif'
+28 findings  5 batched in 5 batches  4 deferred  19 skipped
+
+Batches
+  1. checkov/CKV_AWS_144    error   1 finding in 1 file → sarifix/checkov/ckv_aws_144
+     main.tf
+  2. checkov/CKV_AWS_145    error   1 finding in 1 file → sarifix/checkov/ckv_aws_145
+     main.tf
+  3. checkov/CKV_AWS_18     error   1 finding in 1 file → sarifix/checkov/ckv_aws_18
+     main.tf
+  4. checkov/CKV_AWS_21     error   1 finding in 1 file → sarifix/checkov/ckv_aws_21
+     main.tf
+  5. checkov/CKV_AWS_23     error   1 finding in 1 file → sarifix/checkov/ckv_aws_23
+     main.tf
+
+Deferred (over limits.batches_per_run)
+  1. checkov/CKV_AWS_24     error   1 finding in 1 file → sarifix/checkov/ckv_aws_24
+     main.tf
+  2. golangci-lint/errcheck error   1 finding in 1 file → sarifix/golangci-lint/errcheck
+     main.go
+  3. trivy/DS-0002          error   1 finding in 1 file → sarifix/trivy/ds-0002
+     Dockerfile
+  4. base-image-2026q4      warning 1 finding in 1 file → sarifix/campaign/base-image-2026q4
+     Dockerfile
+
+Skipped
+  below_min_level  5
+  rule_not_allowed 14
+```
+
+Batches hold one rule (or one campaign) each, ordered by severity and then size, and `limits.batches_per_run` caps how many a run attempts. Add `--details` to list every finding and why each skipped one was skipped, `--rule` or `--campaign` to narrow the run, and `--baseline` to keep only findings that are new since another scan. [Modes](guides/modes.md#skip-reasons) lists the skip reasons. `sarifix fix --mode report` writes the same plan out as enriched SARIF and a JSON summary.
+
 ## Exit codes
 
 | Code | Meaning |
@@ -107,7 +144,7 @@ Twenty-six findings moved but are still recognized as the same finding. The two 
 | 0 | Success, including nothing to do |
 | 1 | Runtime error |
 | 2 | Config error |
-| 3 | Some batches failed verification (used by the planned fixing commands) |
+| 3 | Some batches failed verification (used once fixing lands in phase 2) |
 
 ## Next steps
 
