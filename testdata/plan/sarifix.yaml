@@ -1,0 +1,38 @@
+# Plan fixture: run against testdata/sarif/basic/*.sarif and
+# testdata/sarif/broken/edge.sarif, it produces every skip reason.
+version: 1
+
+scanners:
+  - name: trivy
+    match: ["Trivy"]
+    command: ["trivy", "config", "--format", "sarif", "-o", "{out}", "{dir}"]
+  - name: checkov
+    match: ["Checkov"]
+    command: ["checkov", "-d", "{dir}", "-o", "sarif", "--output-file-path", "{outdir}"]
+    output: "{outdir}/results_sarif.sarif"
+  - name: image-migrate
+    command: ["../../tools/image-migrate.sh", "{dir}", "{out}"]
+  - name: edge
+    command: ["true"]
+  # golangci-lint is deliberately not configured: its findings are unrouted.
+
+rules:
+  allow:
+    - trivy/*
+    - checkov/CKV_AWS_*
+    - edge/*
+  deny: ["checkov/CKV_AWS_18"]
+  min_level: warning
+
+paths:
+  deny: ["src/**"]
+
+campaigns:
+  - id: base-image-2026q4
+    scanner: image-migrate
+    rules: ["image-migrate/DEPRECATED_BASE"]
+
+limits:
+  files_per_batch: 1
+  findings_per_batch: 2
+  batches_per_run: 4

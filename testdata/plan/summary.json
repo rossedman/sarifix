@@ -1,0 +1,197 @@
+{
+  "findings": 35,
+  "batched": 4,
+  "deferred": 11,
+  "skipped": {
+    "below_min_level": 6,
+    "no_location": 4,
+    "path_denied": 2,
+    "rule_denied": 1,
+    "rule_not_allowed": 6,
+    "unrouted": 1
+  },
+  "batches": [
+    {
+      "id": "checkov/CKV_AWS_144",
+      "key": "checkov/CKV_AWS_144",
+      "branch": "sarifix/checkov/ckv_aws_144",
+      "scanner": "checkov",
+      "ruleId": "CKV_AWS_144",
+      "level": "error",
+      "findings": 1,
+      "files": [
+        "main.tf"
+      ]
+    },
+    {
+      "id": "checkov/CKV_AWS_145",
+      "key": "checkov/CKV_AWS_145",
+      "branch": "sarifix/checkov/ckv_aws_145",
+      "scanner": "checkov",
+      "ruleId": "CKV_AWS_145",
+      "level": "error",
+      "findings": 1,
+      "files": [
+        "main.tf"
+      ]
+    },
+    {
+      "id": "checkov/CKV_AWS_21",
+      "key": "checkov/CKV_AWS_21",
+      "branch": "sarifix/checkov/ckv_aws_21",
+      "scanner": "checkov",
+      "ruleId": "CKV_AWS_21",
+      "level": "error",
+      "findings": 1,
+      "files": [
+        "main.tf"
+      ]
+    },
+    {
+      "id": "checkov/CKV_AWS_23",
+      "key": "checkov/CKV_AWS_23",
+      "branch": "sarifix/checkov/ckv_aws_23",
+      "scanner": "checkov",
+      "ruleId": "CKV_AWS_23",
+      "level": "error",
+      "findings": 1,
+      "files": [
+        "main.tf"
+      ]
+    }
+  ],
+  "deferredBatches": [
+    {
+      "id": "checkov/CKV_AWS_24",
+      "key": "checkov/CKV_AWS_24",
+      "branch": "sarifix/checkov/ckv_aws_24",
+      "scanner": "checkov",
+      "ruleId": "CKV_AWS_24",
+      "level": "error",
+      "findings": 1,
+      "files": [
+        "main.tf"
+      ]
+    },
+    {
+      "id": "trivy/AWS-0086",
+      "key": "trivy/AWS-0086",
+      "branch": "sarifix/trivy/aws-0086",
+      "scanner": "trivy",
+      "ruleId": "AWS-0086",
+      "level": "error",
+      "findings": 1,
+      "files": [
+        "main.tf"
+      ]
+    },
+    {
+      "id": "trivy/AWS-0087",
+      "key": "trivy/AWS-0087",
+      "branch": "sarifix/trivy/aws-0087",
+      "scanner": "trivy",
+      "ruleId": "AWS-0087",
+      "level": "error",
+      "findings": 1,
+      "files": [
+        "main.tf"
+      ]
+    },
+    {
+      "id": "trivy/AWS-0091",
+      "key": "trivy/AWS-0091",
+      "branch": "sarifix/trivy/aws-0091",
+      "scanner": "trivy",
+      "ruleId": "AWS-0091",
+      "level": "error",
+      "findings": 1,
+      "files": [
+        "main.tf"
+      ]
+    },
+    {
+      "id": "trivy/AWS-0093",
+      "key": "trivy/AWS-0093",
+      "branch": "sarifix/trivy/aws-0093",
+      "scanner": "trivy",
+      "ruleId": "AWS-0093",
+      "level": "error",
+      "findings": 1,
+      "files": [
+        "main.tf"
+      ]
+    },
+    {
+      "id": "trivy/AWS-0107",
+      "key": "trivy/AWS-0107",
+      "branch": "sarifix/trivy/aws-0107",
+      "scanner": "trivy",
+      "ruleId": "AWS-0107",
+      "level": "error",
+      "findings": 1,
+      "files": [
+        "main.tf"
+      ]
+    },
+    {
+      "id": "trivy/AWS-0132",
+      "key": "trivy/AWS-0132",
+      "branch": "sarifix/trivy/aws-0132",
+      "scanner": "trivy",
+      "ruleId": "AWS-0132",
+      "level": "error",
+      "findings": 1,
+      "files": [
+        "main.tf"
+      ]
+    },
+    {
+      "id": "trivy/DS-0002",
+      "key": "trivy/DS-0002",
+      "branch": "sarifix/trivy/ds-0002",
+      "scanner": "trivy",
+      "ruleId": "DS-0002",
+      "level": "error",
+      "findings": 1,
+      "files": [
+        "Dockerfile"
+      ]
+    },
+    {
+      "id": "trivy/DS-0025",
+      "key": "trivy/DS-0025",
+      "branch": "sarifix/trivy/ds-0025",
+      "scanner": "trivy",
+      "ruleId": "DS-0025",
+      "level": "error",
+      "findings": 1,
+      "files": [
+        "Dockerfile"
+      ]
+    },
+    {
+      "id": "base-image-2026q4",
+      "key": "base-image-2026q4",
+      "branch": "sarifix/campaign/base-image-2026q4",
+      "scanner": "image-migrate",
+      "campaign": "base-image-2026q4",
+      "level": "warning",
+      "findings": 1,
+      "files": [
+        "Dockerfile"
+      ]
+    },
+    {
+      "id": "trivy/AWS-0090",
+      "key": "trivy/AWS-0090",
+      "branch": "sarifix/trivy/aws-0090",
+      "scanner": "trivy",
+      "ruleId": "AWS-0090",
+      "level": "warning",
+      "findings": 1,
+      "files": [
+        "main.tf"
+      ]
+    }
+  ]
+}

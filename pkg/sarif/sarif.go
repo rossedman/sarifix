@@ -60,6 +60,19 @@ type SourcedRun struct {
 
 	raw          json.RawMessage
 	fingerprints map[int]map[string]string
+	properties   map[int]map[string]any
+}
+
+// SetResultProperty records properties[key] = value on result i, applied
+// when the run is written. value must marshal to JSON.
+func (r *SourcedRun) SetResultProperty(i int, key string, value any) {
+	if r.properties == nil {
+		r.properties = map[int]map[string]any{}
+	}
+	if r.properties[i] == nil {
+		r.properties[i] = map[string]any{}
+	}
+	r.properties[i][key] = value
 }
 
 // AddPartialFingerprint records partialFingerprints[key] = value on result
@@ -83,7 +96,7 @@ func (r *SourcedRun) AddPartialFingerprint(i int, key, value string) {
 
 // JSON returns the run's original JSON with recorded patches applied.
 func (r *SourcedRun) JSON() (json.RawMessage, error) {
-	if len(r.fingerprints) == 0 {
+	if len(r.fingerprints) == 0 && len(r.properties) == 0 {
 		return r.raw, nil
 	}
 	dec := json.NewDecoder(bytes.NewReader(r.raw))
@@ -93,22 +106,32 @@ func (r *SourcedRun) JSON() (json.RawMessage, error) {
 		return nil, err
 	}
 	results, _ := run["results"].([]any)
-	for i, fps := range r.fingerprints {
+	patch := func(i int, field string, kv map[string]any) {
 		if i < 0 || i >= len(results) {
-			continue
+			return
 		}
 		res, ok := results[i].(map[string]any)
 		if !ok {
-			continue
+			return
 		}
-		pf, _ := res["partialFingerprints"].(map[string]any)
-		if pf == nil {
-			pf = map[string]any{}
+		m, _ := res[field].(map[string]any)
+		if m == nil {
+			m = map[string]any{}
 		}
+		for k, v := range kv {
+			m[k] = v
+		}
+		res[field] = m
+	}
+	for i, fps := range r.fingerprints {
+		kv := make(map[string]any, len(fps))
 		for k, v := range fps {
-			pf[k] = v
+			kv[k] = v
 		}
-		res["partialFingerprints"] = pf
+		patch(i, "partialFingerprints", kv)
+	}
+	for i, props := range r.properties {
+		patch(i, "properties", props)
 	}
 	return marshal(run)
 }
