@@ -63,11 +63,11 @@ then size. Batches over limits.batches_per_run are listed as deferred.`,
 			if a.jsonOut() {
 				return a.writeJSON(p.Summarize())
 			}
-			return a.printPlan(a.out(), p, details)
+			return a.printPlan(a.out(), p, details, sel)
 		},
 	}
 	sel.addFlags(c)
-	c.Flags().BoolVar(&details, "details", false, "list every finding under its batch, and every skipped finding")
+	c.Flags().BoolVar(&details, "details", false, "list every finding under its batch, and every skipped finding that matches --rule and --campaign")
 	return c
 }
 
@@ -113,8 +113,26 @@ func (a *app) buildPlan(sel selection) (*plan.Plan, *sarif.Log, error) {
 	return p, log, nil
 }
 
-// printPlan renders a plan for people.
-func (a *app) printPlan(w io.Writer, p *plan.Plan, details bool) error {
+// inSelection reports whether an entry matches --rule and --campaign, so
+// --details can leave out findings the user filtered away.
+func (s selection) inSelection(e plan.Entry) bool {
+	if s.campaign != "" && e.Campaign != s.campaign {
+		return false
+	}
+	if len(s.rules) == 0 {
+		return true
+	}
+	for _, g := range s.rules {
+		if glob.MatchKey(g, e.Status.RuleKey) {
+			return true
+		}
+	}
+	return false
+}
+
+// printPlan renders a plan for people. With details, every batched finding
+// is listed, and so is every skipped finding inside the selection.
+func (a *app) printPlan(w io.Writer, p *plan.Plan, details bool, sel selection) error {
 	s := a.styles
 	sum := p.Summarize()
 	skipped := sum.Findings - sum.Batched - sum.Deferred
@@ -189,7 +207,7 @@ func (a *app) printPlan(w io.Writer, p *plan.Plan, details bool) error {
 			continue
 		}
 		for _, e := range p.Entries {
-			if e.Status.Status == plan.StatusSkipped && e.Status.Reason == c.Reason {
+			if e.Status.Status == plan.StatusSkipped && e.Status.Reason == c.Reason && sel.inSelection(e) {
 				if err := a.printEntry(w, "     ", e); err != nil {
 					return err
 				}

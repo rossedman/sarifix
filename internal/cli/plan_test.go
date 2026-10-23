@@ -93,6 +93,18 @@ func TestPlanSelection(t *testing.T) {
 		t.Errorf("--baseline-root: %+v", s.Skipped)
 	}
 
+	// --details lists only skipped findings inside the selection; the
+	// counts still cover everything.
+	out, _, _ := run(t, append(planArgs("plan"), "--rule", "*/DS-*", "--details")...)
+	if !strings.Contains(out, "not_selected") || strings.Contains(out, "trivy/AWS-0086 main.tf") ||
+		!strings.Contains(out, "trivy/DS-0026 Dockerfile:1 (note < warning)") {
+		t.Errorf("--details with --rule:\n%s", out)
+	}
+	out, _, _ = run(t, append(planArgs("plan"), "--campaign", "base-image-2026q4", "--details")...)
+	if strings.Contains(out, "trivy/") || !strings.Contains(out, "image-migrate/DEPRECATED_BASE Dockerfile:1") {
+		t.Errorf("--details with --campaign:\n%s", out)
+	}
+
 	for _, tc := range []struct {
 		args []string
 		code int
