@@ -27,7 +27,9 @@ For each result, sarifix takes the first of these that exists:
 2. **Any other `partialFingerprints`** the tool wrote, in key order. Entries written by sarifix itself are not mixed in.
 3. **A computed hash**: `sha256(tool, ruleId, path, snippet)`, where the snippet is the flagged lines with every run of whitespace collapsed to a single space. Reformatting or re-indenting the flagged code does not change it.
 
-The snippet comes from the SARIF region when the tool included one. Otherwise sarifix reads the lines from the files: under `--repo` for the head scan and `--base-root` for the base scan. When neither is available it falls back to the `sarifix/v1` fingerprint that `sarifix scan` recorded.
+The snippet comes from the SARIF region when the tool included one. Otherwise sarifix uses the `sarifix/v1` fingerprint that `sarifix scan` recorded, which was computed from the checkout that was scanned. Only when neither exists does it read the lines from the files: under `--repo` for the head scan, and under `--base-root` (`diff`) or `--baseline-root` (`plan`, `fix`) for the base scan.
+
+That order matters when the base scan comes from an older commit. Reading its lines from today's files would hash the wrong text for any line that has since changed.
 
 Identical findings in the same run (same tool, rule, path and snippet) are numbered in order of appearance, so each still has a distinct fingerprint. Diffs compare fingerprints as a multiset: two identical findings in the head and one in the base give one unchanged and one new.
 

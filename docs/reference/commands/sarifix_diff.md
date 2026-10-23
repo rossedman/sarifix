@@ -14,10 +14,10 @@ Compare a base and a head SARIF set by fingerprint. Line numbers never count,
 so findings that only moved are unchanged.
 
 Fingerprints come from primaryLocationLineHash when the tool provides it,
-then other partialFingerprints, then a hash of the flagged lines. Lines are
-read from the SARIF snippet, else from the files: under --repo for head and
---base-root for base (default --repo), else from the sarifix/v1 fingerprint
-that 'sarifix scan' records.
+then other partialFingerprints, then a hash of the flagged lines. The lines
+come from the SARIF snippet; else the sarifix/v1 fingerprint that 'sarifix
+scan' recorded is used; else they are read from the files: under --repo for
+head and --base-root for base (default --repo).
 
 ```
 sarifix diff [flags]
