@@ -29,7 +29,7 @@ type Config struct {
 	Rules     Rules      `yaml:"rules" json:"rules" doc:"Which rules may be fixed."`
 	Paths     Paths      `yaml:"paths" json:"paths" doc:"Which files may be changed."`
 	Campaigns []Campaign `yaml:"campaigns" json:"campaigns" doc:"Named migrations tracked across repos."`
-	Limits    Limits     `yaml:"limits" json:"limits" doc:"Batch sizes, retries and time limits."`
+	Limits    Limits     `yaml:"limits" json:"limits" doc:"Batch grouping and sizes, retries and time limits."`
 	Verify    Verify     `yaml:"verify" json:"verify" doc:"How a fix is proven before it is published."`
 	Agent     Agent      `yaml:"agent" json:"agent" doc:"The AI agent that writes fixes."`
 	Publish   Publish    `yaml:"publish" json:"publish" doc:"How verified fixes are published."`
@@ -69,8 +69,16 @@ type Campaign struct {
 	Labels  []string `yaml:"labels" json:"labels" doc:"Extra labels for the campaign's PRs."`
 }
 
+// Ways findings are grouped into batches (limits.group_by).
+const (
+	GroupByRule = "rule"
+	GroupByFile = "file"
+	GroupByAuto = "auto"
+)
+
 // Limits caps the work done per batch and per run.
 type Limits struct {
+	GroupBy          string   `yaml:"group_by" json:"group_by" doc:"How findings become batches: rule (one per rule), file (one per scanner and file) or auto (one per rule, except that rules a scanner reports in only one file share a batch per file)." default:"rule"`
 	FilesPerBatch    int      `yaml:"files_per_batch" json:"files_per_batch" doc:"Most files one batch may touch." default:"10"`
 	FindingsPerBatch int      `yaml:"findings_per_batch" json:"findings_per_batch" doc:"Most findings in one batch." default:"25"`
 	BatchesPerRun    int      `yaml:"batches_per_run" json:"batches_per_run" doc:"Most batches one run attempts." default:"5"`
@@ -127,6 +135,7 @@ func Default() *Config {
 		Rules:   Rules{MinLevel: "warning"},
 		Paths:   Paths{Deny: []string{".github/workflows/**"}},
 		Limits: Limits{
+			GroupBy:          GroupByRule,
 			FilesPerBatch:    10,
 			FindingsPerBatch: 25,
 			BatchesPerRun:    5,

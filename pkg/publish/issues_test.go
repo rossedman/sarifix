@@ -288,6 +288,33 @@ func TestIssueBody(t *testing.T) {
 		t.Errorf("marker = %v", m)
 	}
 
+	// A file batch names its rules and selects each one; a campaign batch
+	// selects the campaign.
+	fb := batch("trivy:k8s.yaml", 0, "k8s.yaml:1", "k8s.yaml:7")
+	fb.Scanner, fb.File, fb.RuleID, fb.Rules = "trivy", "k8s.yaml", "", []string{"trivy/KSV-1", "trivy/it's"}
+	if got := IssueTitle(fb); got != "sarifix: fix 2 trivy findings in k8s.yaml" {
+		t.Errorf("file title = %q", got)
+	}
+	fb.Part = 2
+	if got := IssueTitle(fb); got != "sarifix: fix 2 trivy findings in k8s.yaml (part 2)" {
+		t.Errorf("file part title = %q", got)
+	}
+	fbody := IssueBody(fb, Links{})
+	for _, want := range []string{
+		"finding(s) for `trivy/KSV-1`, `trivy/it's` from trivy, in 1 file(s)",
+		"A rescan reports no `trivy/KSV-1`, `trivy/it's` finding",
+		`--rule 'trivy/KSV-1' --rule 'trivy/it'\''s' --json`,
+	} {
+		if !strings.Contains(fbody, want) {
+			t.Errorf("file body missing %q:\n%s", want, fbody)
+		}
+	}
+	cb := batch("base-v4", 0, "Dockerfile:1")
+	cb.Campaign = "base-v4"
+	if cbody := IssueBody(cb, Links{}); !strings.Contains(cbody, "for campaign `base-v4` from") || !strings.Contains(cbody, "--campaign 'base-v4' --json") {
+		t.Errorf("campaign body:\n%s", cbody)
+	}
+
 	// Without links, locations are plain code; long batches are capped.
 	var locs []string
 	for i := 1; i <= maxListed+3; i++ {

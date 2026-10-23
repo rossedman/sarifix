@@ -131,6 +131,7 @@ nav:
           - Policy and batching: adr/0005-policy-and-batching.md
           - Feedback hook for Claude Code: adr/0006-feedback-hook.md
           - Issues mode: adr/0007-issues-mode.md
+          - Grouping by file: adr/0008-group-by.md
 
 extra:
   social:

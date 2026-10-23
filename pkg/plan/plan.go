@@ -127,6 +127,8 @@ type BatchSummary struct {
 	Scanner  string   `json:"scanner"`
 	RuleID   string   `json:"ruleId,omitempty"`
 	Campaign string   `json:"campaign,omitempty"`
+	File     string   `json:"file,omitempty"`
+	Rules    []string `json:"rules"`
 	Level    string   `json:"level"`
 	Findings int      `json:"findings"`
 	Files    []string `json:"files"`
@@ -170,7 +172,7 @@ func (p *Plan) Summarize() Summary {
 func (p *Plan) batchSummary(b group.Batch) BatchSummary {
 	return BatchSummary{
 		ID: b.ID(), Key: b.Key, Branch: b.Branch(p.BranchPrefix), Scanner: b.Scanner, RuleID: b.RuleID,
-		Campaign: b.Campaign, Level: b.Level, Findings: len(b.Findings), Files: b.Files,
+		Campaign: b.Campaign, File: b.File, Rules: b.Rules, Level: b.Level, Findings: len(b.Findings), Files: b.Files,
 	}
 }
 

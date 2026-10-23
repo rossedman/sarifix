@@ -22,7 +22,7 @@ paths:         # files that are never edited
   deny: ["vendor/**", "**/*_generated.go"]
 ```
 
-Run `sarifix config validate` to load the file, apply defaults and print the resolved result. Errors name the file, the key path and the line, for example `scanners[2].command: must not be empty`. There are 28 checks, covering unknown placeholders, duplicate scanner names, overlapping `match` values, empty commands, campaigns that reference an unknown scanner, bad globs and out-of-range limits. Add `--strict` to also reject an `allow` glob that matches no configured scanner.
+Run `sarifix config validate` to load the file, apply defaults and print the resolved result. Errors name the file, the key path and the line, for example `scanners[2].command: must not be empty`. There are 29 checks, covering unknown placeholders, duplicate scanner names, overlapping `match` values, empty commands, campaigns that reference an unknown scanner, bad globs and out-of-range limits. Add `--strict` to also reject an `allow` glob that matches no configured scanner.
 
 !!! note "Which sections do something today"
     `scanners` drives `sarifix scan`. `rules`, `paths`, `limits`, `verify`, `agent`, `publish` and `campaigns` are validated now and used by the fixing phases on the [roadmap](roadmap.md).
@@ -97,6 +97,25 @@ paths:
 
 !!! warning "Workflows are always denied"
     `.github/workflows/**` is denied however you configure `paths.deny`, including when you replace the list. Fixing tools that edit CI are a way to escalate privileges, so this is not optional. The planned diff guard enforces it on the actual diff, not only in the prompt. See [Security](security.md).
+
+## Batches
+
+sarifix fixes findings in batches: one branch and one pull request, or one issue in [issues mode](guides/modes.md#issues). A campaign is always one batch. Other findings are grouped by `limits.group_by`:
+
+| `group_by` | One batch per | Suits |
+| --- | --- | --- |
+| `rule` (default) | Rule, such as `semgrep/missing-ssl-minversion` across seven files | Rules spread across the code |
+| `file` | Scanner and file, with every rule it reports there | Scanners that check one file for many settings, such as Trivy on Kubernetes manifests |
+| `auto` | Rule, except that rules a scanner reports in only one file share a batch for that file | A mix of both |
+
+For example, on a repository where Trivy flags eight settings in one manifest and Semgrep reports three rules across several Go files, `rule` makes 11 batches and `auto` makes 4: the eight Trivy rules become one batch, `trivy:examples/kubernetes/app.yaml`. Batches stay within one scanner. `limits.files_per_batch` and `limits.findings_per_batch` split any batch that is too big.
+
+```yaml
+limits:
+  group_by: auto
+```
+
+Changing `group_by` changes batch IDs, so issues mode closes the old issues and opens the regrouped ones. See [ADR 8](adr/0008-group-by.md).
 
 ## Layering with an org config
 

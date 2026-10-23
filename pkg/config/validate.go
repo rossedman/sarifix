@@ -204,6 +204,11 @@ func (v *validator) campaigns() {
 // limits checks that every limit is in range.
 func (v *validator) limits() {
 	lm := v.l.Limits
+	switch lm.GroupBy {
+	case GroupByRule, GroupByFile, GroupByAuto:
+	default:
+		v.add("limits.group_by", "must be rule, file or auto, got %q", lm.GroupBy)
+	}
 	for _, x := range []struct {
 		name string
 		val  int

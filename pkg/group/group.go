@@ -1,5 +1,6 @@
-// Package group batches fixable findings into small single-rule units of
-// work, each of which becomes one branch and one PR.
+// Package group batches fixable findings into small units of work, each of
+// which becomes one branch and one PR (or issue): one rule, one campaign, or
+// one scanner's rules in one file.
 package group
 
 import (
@@ -16,14 +17,19 @@ import (
 	"github.com/rossedman/sarifix/pkg/policy"
 )
 
-// Batch is a set of findings for one rule (or one campaign) that is fixed,
-// verified and published together.
+// Batch is a set of findings for one rule, one campaign, or one scanner's
+// rules in one file, that is fixed, verified and published together.
 type Batch struct {
-	// Key is "<scanner>/<ruleId>", or the campaign ID for campaign batches.
+	// Key is "<scanner>/<ruleId>", the campaign ID for campaign batches, or
+	// "<scanner>:<path>" for file batches.
 	Key      string `json:"key"`
 	Scanner  string `json:"scanner"`
 	RuleID   string `json:"ruleId,omitempty"`
 	Campaign string `json:"campaign,omitempty"`
+	// File is the one file a file batch covers.
+	File string `json:"file,omitempty"`
+	// Rules are the rule keys in the batch, sorted.
+	Rules []string `json:"rules"`
 	// Part numbers the batches a key was split into, from 1.
 	Part int `json:"part"`
 	// Level is the most severe level among the findings.
@@ -40,14 +46,18 @@ func (b Batch) ID() string {
 	return b.Key
 }
 
-// Branch is the batch's fix branch: <prefix>/<scanner>/<rule-slug>, or
-// <prefix>/campaign/<id> for campaigns, with "-<part>" for later parts.
-// Re-running on the same input yields the same branch names.
+// Branch is the batch's fix branch: <prefix>/<scanner>/<rule-slug>,
+// <prefix>/campaign/<id> for campaigns, or <prefix>/file/<scanner>/<path-slug>
+// for file batches, with "-<part>" for later parts. Re-running on the same
+// input yields the same branch names.
 func (b Batch) Branch(prefix string) string {
 	var name string
-	if b.Campaign != "" {
+	switch {
+	case b.Campaign != "":
 		name = prefix + "/campaign/" + Slug(b.Campaign)
-	} else {
+	case b.File != "":
+		name = prefix + "/file/" + Slug(b.Scanner) + "/" + Slug(b.File)
+	default:
 		name = prefix + "/" + Slug(b.Scanner) + "/" + Slug(b.RuleID)
 	}
 	if b.Part > 1 {
@@ -64,40 +74,92 @@ type Result struct {
 	Deferred []Batch `json:"deferred"`
 }
 
-// Batches groups fixable items by rule (or campaign), splits groups to fit
-// files_per_batch and findings_per_batch, orders them by the group's
-// severity then size (keeping a group's parts together and in order), and
-// caps the run at batches_per_run.
-func Batches(items []policy.Item, lim config.Limits) Result {
-	type groupT struct {
-		key, scanner, rule, campaign string
-		items                        []policy.Item
-	}
-	var order []string
+// groupT is the findings that share a batch key, before splitting.
+type groupT struct {
+	key, scanner, rule, campaign, file string
+	items                              []policy.Item
+}
+
+// groupItems groups fixable items by campaign, then by rule or by file as
+// groupBy says, keeping the order in which keys first appear.
+func groupItems(items []policy.Item, groupBy string) []*groupT {
+	var order []*groupT
 	groups := map[string]*groupT{}
-	for _, it := range items {
-		if it.Skip != "" {
-			continue
-		}
-		g := &groupT{key: it.Key(), scanner: it.Scanner, rule: it.RuleID}
-		if it.Campaign != "" {
-			g = &groupT{key: it.Campaign, scanner: it.Scanner, campaign: it.Campaign}
-		}
+	add := func(g *groupT, it policy.Item) {
 		if existing, ok := groups[g.key]; ok {
 			g = existing
 		} else {
 			groups[g.key] = g
-			order = append(order, g.key)
+			order = append(order, g)
 		}
 		g.items = append(g.items, it)
 	}
+	byFile := func(it policy.Item) *groupT {
+		return &groupT{key: it.Scanner + ":" + it.Path, scanner: it.Scanner, file: it.Path}
+	}
+	for _, it := range items {
+		switch {
+		case it.Skip != "":
+		case it.Campaign != "":
+			add(&groupT{key: it.Campaign, scanner: it.Scanner, campaign: it.Campaign}, it)
+		case groupBy == config.GroupByFile:
+			add(byFile(it), it)
+		default:
+			add(&groupT{key: it.Key(), scanner: it.Scanner, rule: it.RuleID}, it)
+		}
+	}
+	if groupBy != config.GroupByAuto {
+		return order
+	}
+	// auto: rules found in only one file move to that file's batch, when at
+	// least two of them share it.
+	single := map[string][]*groupT{}
+	for _, g := range order {
+		if g.rule != "" && sameFile(g.items) {
+			k := byFile(g.items[0]).key
+			single[k] = append(single[k], g)
+		}
+	}
+	var out []*groupT
+	merged := map[string]*groupT{}
+	for _, g := range order {
+		if g.rule == "" || !sameFile(g.items) || len(single[byFile(g.items[0]).key]) < 2 {
+			out = append(out, g)
+			continue
+		}
+		f := byFile(g.items[0])
+		if m, ok := merged[f.key]; ok {
+			m.items = append(m.items, g.items...)
+			continue
+		}
+		f.items = slices.Clone(g.items)
+		merged[f.key] = f
+		out = append(out, f)
+	}
+	return out
+}
 
+// sameFile reports whether every item is in the same file.
+func sameFile(items []policy.Item) bool {
+	for _, it := range items[1:] {
+		if it.Path != items[0].Path {
+			return false
+		}
+	}
+	return true
+}
+
+// Batches groups fixable items by campaign, then by rule or file as
+// limits.group_by says, splits groups to fit files_per_batch and
+// findings_per_batch, orders them by the group's severity then size
+// (keeping a group's parts together and in order), and caps the run at
+// batches_per_run.
+func Batches(items []policy.Item, lim config.Limits) Result {
 	var all []Batch
-	for _, k := range order {
-		g := groups[k]
+	for _, g := range groupItems(items, lim.GroupBy) {
 		for i, part := range split(g.items, lim.FilesPerBatch, lim.FindingsPerBatch) {
-			b := Batch{Key: g.key, Scanner: g.scanner, RuleID: g.rule, Campaign: g.campaign, Part: i + 1, Findings: part}
-			b.Files, b.Level = summarize(part)
+			b := Batch{Key: g.key, Scanner: g.scanner, RuleID: g.rule, Campaign: g.campaign, File: g.file, Part: i + 1, Findings: part}
+			b.Files, b.Level, b.Rules = summarize(part)
 			all = append(all, b)
 		}
 	}
@@ -176,22 +238,27 @@ func split(items []policy.Item, maxFiles, maxFindings int) [][]policy.Item {
 	return parts
 }
 
-// summarize returns a part's sorted file list and its highest level.
-func summarize(items []policy.Item) ([]string, string) {
+// summarize returns a part's sorted file list, its highest level and its
+// sorted rule keys.
+func summarize(items []policy.Item) ([]string, string, []string) {
 	seen := map[string]bool{}
-	var files []string
+	var files, rules []string
 	level := finding.LevelNone
 	for _, it := range items {
 		if !seen[it.Path] {
 			seen[it.Path] = true
 			files = append(files, it.Path)
 		}
+		if k := it.Key(); !slices.Contains(rules, k) {
+			rules = append(rules, k)
+		}
 		if finding.LevelRank(it.Level) > finding.LevelRank(level) {
 			level = it.Level
 		}
 	}
 	sort.Strings(files)
-	return files, level
+	sort.Strings(rules)
+	return files, level, rules
 }
 
 // slugUnsafe matches runs of characters not allowed in a slug.
