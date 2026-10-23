@@ -96,6 +96,7 @@ type Agent struct {
 type Publish struct {
 	PR     PRPublish     `yaml:"pr" json:"pr" doc:"Settings for --mode pr."`
 	Review ReviewPublish `yaml:"review" json:"review" doc:"Settings for --mode review."`
+	Issues IssuesPublish `yaml:"issues" json:"issues" doc:"Settings for --mode issues."`
 }
 
 // PRPublish configures pull requests.
@@ -109,6 +110,14 @@ type PRPublish struct {
 // ReviewPublish configures review comments.
 type ReviewPublish struct {
 	MaxSuggestions int `yaml:"max_suggestions" json:"max_suggestions" doc:"Most suggested changes in one review." default:"20"`
+}
+
+// IssuesPublish configures one GitHub issue per batch.
+type IssuesPublish struct {
+	Label      string `yaml:"label" json:"label" doc:"Label on every batch issue; sarifix only manages issues that carry it." default:"sarifix"`
+	MaxOpen    int    `yaml:"max_open" json:"max_open" doc:"Most batch issues open at once, the most severe batches first." default:"10"`
+	Queue      int    `yaml:"queue" json:"queue" doc:"How many issues to keep labeled queue_label for an agent; 0 queues none." default:"0"`
+	QueueLabel string `yaml:"queue_label" json:"queue_label" doc:"Label that hands an issue to an agent queue." default:"agent-ready"`
 }
 
 // Default returns a config with every default filled in and no scanners.
@@ -130,6 +139,7 @@ func Default() *Config {
 		Publish: Publish{
 			PR:     PRPublish{BranchPrefix: "sarifix", Labels: []string{"sarifix"}, ReviewersFrom: "codeowners"},
 			Review: ReviewPublish{MaxSuggestions: 20},
+			Issues: IssuesPublish{Label: "sarifix", MaxOpen: 10, QueueLabel: "agent-ready"},
 		},
 	}
 }

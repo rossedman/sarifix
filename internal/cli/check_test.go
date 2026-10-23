@@ -10,8 +10,6 @@ import (
 	"strconv"
 	"strings"
 	"testing"
-
-	"github.com/rossedman/sarifix/pkg/finding"
 )
 
 // checkRepo is a git repo configured with the flag-lines scanner. a.txt has
@@ -313,21 +311,3 @@ func TestWriteFeedbackTruncates(t *testing.T) {
 
 // first returns the first of check's results.
 func first(out, _ string, _ int) string { return out }
-
-func TestHelpFor(t *testing.T) {
-	t.Parallel()
-	tests := []struct {
-		f    finding.Finding
-		want string
-	}{
-		{finding.Finding{HelpURI: "https://docs/x", HelpText: "long"}, "https://docs/x"},
-		{finding.Finding{Message: "Ensure X", HelpText: "Ensure  X\nResource: other.thing"}, ""},
-		{finding.Finding{Message: "Bad line", HelpText: "Remove the marker.\nMore."}, "Remove the marker."},
-		{finding.Finding{Message: "m"}, ""},
-	}
-	for _, tt := range tests {
-		if got := helpFor(tt.f); got != tt.want {
-			t.Errorf("helpFor(%+v) = %q, want %q", tt.f, got, tt.want)
-		}
-	}
-}

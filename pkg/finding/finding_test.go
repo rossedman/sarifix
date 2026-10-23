@@ -377,3 +377,21 @@ func TestAnchorFindingTrustsMatchingFileOnly(t *testing.T) {
 		t.Error("anchored a finding with no line")
 	}
 }
+
+func TestHelp(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		f    Finding
+		want string
+	}{
+		{Finding{HelpURI: "https://docs/x", HelpText: "long"}, "https://docs/x"},
+		{Finding{Message: "Ensure X", HelpText: "Ensure  X\nResource: other.thing"}, ""},
+		{Finding{Message: "Bad line", HelpText: "Remove the marker.\nMore."}, "Remove the marker."},
+		{Finding{Message: "m"}, ""},
+	}
+	for _, tt := range tests {
+		if got := tt.f.Help(); got != tt.want {
+			t.Errorf("Help(%+v) = %q, want %q", tt.f, got, tt.want)
+		}
+	}
+}

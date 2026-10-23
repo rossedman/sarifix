@@ -70,3 +70,8 @@ publish:
     reviewers_from: codeowners
   review:
     max_suggestions: 20
+  issues: # fix --mode issues: one GitHub issue per batch
+    label: sarifix
+    max_open: 10
+    queue: 0 # issues to keep labeled queue_label for an agent queue
+    queue_label: agent-ready

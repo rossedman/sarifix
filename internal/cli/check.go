@@ -314,7 +314,7 @@ func (a *app) runCheck(cmd *cobra.Command, o checkOptions) (checkResult, error) 
 			Path:    ui.Sanitize(it.Path, 300),
 			Line:    it.StartLine,
 			Message: ui.Sanitize(it.Message, checkMaxMessage),
-			Help:    ui.Sanitize(helpFor(it.Finding), checkMaxHelp),
+			Help:    ui.Sanitize(it.Help(), checkMaxHelp),
 		})
 	}
 	for _, spec := range l.Scanners {
@@ -323,22 +323,6 @@ func (a *app) runCheck(cmd *cobra.Command, o checkOptions) (checkResult, error) 
 		}
 	}
 	return res, nil
-}
-
-// helpFor picks the most useful pointer for fixing f: the rule's docs link,
-// else the first line of its help text when that says more than the
-// message. Scanners' help text is often rule-level boilerplate (Trivy's is a
-// markdown table) or names another resource (Checkov's), so a link is
-// preferred.
-func helpFor(f finding.Finding) string {
-	if f.HelpURI != "" {
-		return f.HelpURI
-	}
-	line, _, _ := strings.Cut(strings.TrimSpace(f.HelpText), "\n")
-	if finding.CollapseSpace(line) == finding.CollapseSpace(f.Message) {
-		return ""
-	}
-	return line
 }
 
 // findingsIn loads every SARIF file in dir and extracts findings against

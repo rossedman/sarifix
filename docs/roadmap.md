@@ -3,7 +3,7 @@
 sarifix is built in six phases. Each ends with a working, released binary and has to meet its done criteria before the next one starts.
 
 !!! success "Where we are"
-    Phases 0 and 1 are built: `config validate`, `scan`, `diff`, `plan`, `fix --mode report` and `version` run today. So does `check`, which reports what a change introduced and runs as a [Claude Code hook](tutorials/claude-code-hook.md) so Claude fixes its own findings. The autonomous fixing modes are planned and do not exist yet.
+    Phases 0 and 1 are built: `config validate`, `scan`, `diff`, `plan`, `fix --mode report`, `fix --mode issues` and `version` run today. So does `check`, which reports what a change introduced and runs as a [Claude Code hook](tutorials/claude-code-hook.md) so Claude fixes its own findings. The autonomous fixing modes are planned and do not exist yet.
 
 | Phase | Name | Status |
 | --- | --- | --- |

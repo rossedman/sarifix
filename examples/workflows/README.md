@@ -18,17 +18,14 @@ The [GitHub Actions tutorial](https://rossedman.io/sarifix/tutorials/github-acti
 
 The workflow passes `actionlint`. Its `run:` steps were executed against a real pull request on [terragoat](https://github.com/bridgecrewio/terragoat), with `RUNNER_TEMP`, `GITHUB_BASE_REF` and `GITHUB_STEP_SUMMARY` set by hand. The `uses:` steps (checkout, setup-go, setup-trivy, upload-artifact) are standard actions pinned to commit SHAs but haven't run together on GitHub yet.
 
-## `sarifix-issues.yml` and `sarifix_issues.py`
+## `sarifix-issues.yml`
 
-A workflow that scans the default branch weekly, after every push to `main` and on demand. It uploads the SARIF to GitHub code scanning, plans batches with `sarifix fix --mode report`, then runs `sarifix_issues.py` to keep one open issue per batch. Issues are created, refreshed and closed as the scans change. They're written in the agent-ready format of the [task-queue](https://github.com/rossedman/claude/tree/main/plugins/task-queue) plugin, so Claude can fix them in Actions one pull request at a time.
+A workflow that scans the default branch weekly, after every push to `main` and on demand. It uploads the SARIF to GitHub code scanning, then runs `sarifix fix --mode issues` to keep one open issue per batch. Issues are opened, refreshed and closed as the scans change. They're written in the agent-ready format of the [task-queue](https://github.com/rossedman/claude/tree/main/plugins/task-queue) plugin, so Claude can fix them in Actions one pull request at a time.
 
-Copy the workflow to `.github/workflows/` and the script to `.github/scripts/`. Two repository variables tune it:
+Copy it to `.github/workflows/`. `publish.issues` in `sarifix.yaml` sets how many issues may be open at once (`max_open`, default 10). The repository variable **`SARIFIX_QUEUE`** (default 0) sets how many to keep labeled `agent-ready`; above 0, it starts paid agent runs. Try `sarifix fix --mode issues --dry-run` locally first, with `GITHUB_TOKEN` and `GITHUB_REPOSITORY` set, to see what it would do.
 
-- **`SARIFIX_MAX_OPEN`** (default 10): how many batch issues can be open at once.
-- **`SARIFIX_QUEUE`** (default 0): how many issues to keep labeled `agent-ready`. Above 0, this starts paid agent runs.
-
-Run the script with `--dry-run` to see what it would do. The [tutorial](https://rossedman.io/sarifix/tutorials/claude-queue/) covers the agent side and how to turn it on gradually.
+The [tutorial](https://rossedman.io/sarifix/tutorials/claude-queue/) covers the agent side and how to turn it on gradually.
 
 ### How it was tested
 
-The workflow passes `actionlint` and `zizmor`, and the script passes `ruff`. The `run:` steps were executed against a test repository with eight scanners, with `RUNNER_TEMP` set by hand and a stand-in `gh` that kept issue state in a file. Three sync runs covered creating, idempotent re-runs, closing fixed batches and queueing. One generated issue was then handed to Claude, which fixed it and passed its **Done when** checks. The `uses:` steps are pinned to commit SHAs but haven't run together on GitHub yet.
+The workflow passes `actionlint` and `zizmor`. Its `run:` steps were executed against a test repository with eight scanners, with `RUNNER_TEMP` and the Actions variables set by hand and an in-memory stand-in for the GitHub API. Three sync runs covered opening issues, an idempotent re-run, closing a fixed batch and refreshing a changed one. The `uses:` steps are pinned to commit SHAs but haven't run together on GitHub yet.
