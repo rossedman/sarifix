@@ -71,7 +71,7 @@ $ sarifix fix --mode issues --sarif 'sarif/*.sarif' --queue 1
 ✓ queued #1 checkov/CKV_TF_1
 ```
 
-Each run opens issues for the most severe batches up to `publish.issues.max_open`, refreshes an issue whose findings changed (unless it's labeled `agent-working`), closes an issue whose batch is no longer reported, and labels the most severe open issues `publish.issues.queue_label` until `publish.issues.queue` are queued or in progress. Issues are matched to batches by a hidden `<!-- sarifix-batch: ... -->` marker, and sarifix never touches an issue without both the marker and `publish.issues.label`.
+Each run opens issues for the most severe batches up to `publish.issues.max_open`, refreshes an issue whose findings changed (unless it's labeled `agent-working`), closes an issue whose batch is no longer reported, and labels the most severe open issues `publish.issues.queue_label` until `publish.issues.queue` are queued or in progress. Issues are matched to batches by a hidden `<!-- sarifix-batch: ... -->` marker, and sarifix never touches an issue without both the marker and `publish.issues.label`. An issue is closed only when its scanner's SARIF was part of the run, so a scanner that failed or was left out doesn't make its batches look fixed; sarifix warns about each configured scanner it got no SARIF from.
 
 It needs a token that can write issues (`GITHUB_TOKEN`, else `GH_TOKEN`) and the repository (`GITHUB_REPOSITORY`, or `--github-repo`). Links use `GITHUB_SERVER_URL` and `GITHUB_SHA` when set, else github.com and the checkout's `HEAD`. `--dry-run` prints what would change without writing. [Turn findings into issues Claude works through](../tutorials/claude-queue.md) sets it up in GitHub Actions.
 

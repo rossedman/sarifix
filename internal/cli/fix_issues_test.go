@@ -5,6 +5,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
@@ -139,6 +140,25 @@ func TestFixIssues(t *testing.T) {
 	}
 	if _, errOut, code = run(t, append(planArgs("fix", "--mode", "issues", "--dry-run"), "--json")...); code != ExitRuntime || !strings.Contains(errOut, "list issues") {
 		t.Errorf("api error with --json: %d %s", code, errOut)
+	}
+}
+
+func TestFixIssuesWarnsAboutMissingScanners(t *testing.T) {
+	githubEnv(t, &fakeGitHub{})
+	_, errOut, code := run(t, "fix", "--mode", "issues", "--dry-run",
+		"--repo", filepath.Join(testdata, "repos", "basic"),
+		"--config", filepath.Join(testdata, "plan", "sarifix.yaml"),
+		"--sarif", filepath.Join(testdata, "sarif", "basic", "trivy.sarif"))
+	if code != 0 {
+		t.Fatalf("%d %s", code, errOut)
+	}
+	for _, s := range []string{"checkov", "image-migrate", "edge"} {
+		if !strings.Contains(errOut, "scanner="+s) {
+			t.Errorf("no warning for %s:\n%s", s, errOut)
+		}
+	}
+	if strings.Contains(errOut, "scanner=trivy") || !strings.Contains(errOut, "no SARIF from this scanner, so its issues stay open") {
+		t.Errorf("warnings:\n%s", errOut)
 	}
 }
 

@@ -204,6 +204,33 @@ func TestIssuesQueueRules(t *testing.T) {
 	}
 }
 
+func TestIssuesOnlyCloseWhatWasScanned(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	tr := newTracker()
+	opts := IssuesOptions{Label: "sarifix", MaxOpen: 10, QueueLabel: "q"}
+	if _, err := Issues(ctx, tr, []group.Batch{batch("trivy/A", 0, "x:1"), batch("checkov/B", 0, "x:2")}, opts); err != nil {
+		t.Fatal(err)
+	}
+	// An issue from before the scanner marker existed: its scanner comes
+	// from the batch ID.
+	tr.issues[3] = &Issue{Number: 3, Body: "<!-- sarifix-batch: gitleaks/C -->", Labels: []string{"sarifix"}}
+	tr.next = 4
+
+	// Only trivy's SARIF was read this time: checkov's and gitleaks's
+	// issues stay open even though their batches are missing.
+	opts.Scanned = map[string]bool{"trivy": true}
+	as, _ := Issues(ctx, tr, nil, opts)
+	if want := []string{"close trivy/A"}; !slices.Equal(kinds(as), want) {
+		t.Fatalf("partial scan = %v", kinds(as))
+	}
+	opts.Scanned = map[string]bool{"checkov": true, "gitleaks": true}
+	as, _ = Issues(ctx, tr, nil, opts)
+	if want := []string{"close checkov/B", "close gitleaks/C"}; !slices.Equal(kinds(as), want) {
+		t.Fatalf("full scan = %v", kinds(as))
+	}
+}
+
 func TestIssuesDryRun(t *testing.T) {
 	t.Parallel()
 	tr := newTracker()
@@ -254,7 +281,7 @@ func TestIssueBody(t *testing.T) {
 			t.Errorf("body missing %q:\n%s", want, body)
 		}
 	}
-	if strings.Count(body, "<!--") != 1 || strings.Contains(body, "\x1b") {
+	if strings.Count(body, "<!--") != 2 || !strings.Contains(body, "<!-- sarifix-scanner: checkov -->\n") || strings.Contains(body, "\x1b") {
 		t.Errorf("unsafe body:\n%s", body)
 	}
 	if m := markerRE.FindStringSubmatch(body); m == nil || m[1] != "checkov/CKV_1#2" {

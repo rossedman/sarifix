@@ -43,7 +43,7 @@ The scanners installed are Trivy and Checkov. Add install steps for whatever you
 
 1. **Creates** issues for the most severe batches, up to `publish.issues.max_open` open at once (default 10). A backlog of 200 batches arrives ten at a time, not all at once.
 2. **Updates** an open issue when its findings change, unless it's labeled `agent-working`. A new commit alone doesn't count as a change.
-3. **Closes** an issue, with a comment, when the scan no longer reports its batch.
+3. **Closes** an issue, with a comment, when the scan no longer reports its batch. Only scanners that produced SARIF in this run can close issues, so a failed scanner leaves its issues open.
 4. **Queues** the most severe open issues by labeling them `publish.issues.queue_label` (`agent-ready`), until `publish.issues.queue` are queued or in progress. It skips issues labeled `agent-failed`. The default is 0, so nothing is queued.
 
 The settings live in `sarifix.yaml`, and `--max-open` and `--queue` override them for one run:
