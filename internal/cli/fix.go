@@ -66,7 +66,7 @@ Modes:
 				return a.writeJSON(fixReport{Mode: mode, Files: files, Batch: len(p.Batches.Run)})
 			}
 			w := a.out()
-			if err := a.printPlan(w, p, false); err != nil {
+			if err := a.printPlan(w, p, false, sel); err != nil {
 				return err
 			}
 			s := a.styles

@@ -252,14 +252,14 @@ func (a *app) out() io.Writer {
 }
 
 // display shortens an absolute path to one relative to the working
-// directory when it is inside it, for human output.
+// directory when it is inside it or at most two levels up, for human output.
 func display(p string) string {
 	wd, err := os.Getwd()
 	if err != nil {
 		return p
 	}
 	rel, err := filepath.Rel(wd, p)
-	if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+	if err != nil || strings.HasPrefix(rel, strings.Repeat(".."+string(filepath.Separator), 3)) || rel == filepath.Join("..", "..", "..") {
 		return p
 	}
 	return rel

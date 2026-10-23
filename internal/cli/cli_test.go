@@ -302,7 +302,10 @@ func TestDisplay(t *testing.T) {
 	if got := display(filepath.Join(wd, "a", "b.sarif")); got != filepath.Join("a", "b.sarif") {
 		t.Errorf("inside: %q", got)
 	}
+	if got := display(filepath.Join(filepath.Dir(wd), "sib", "x")); got != filepath.Join("..", "sib", "x") {
+		t.Errorf("sibling: %q", got)
+	}
 	if got := display("/elsewhere/x"); got != "/elsewhere/x" {
-		t.Errorf("outside: %q", got)
+		t.Errorf("far away: %q", got)
 	}
 }

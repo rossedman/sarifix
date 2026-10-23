@@ -140,6 +140,7 @@ Batches hold one rule (or one campaign) each, ordered by severity and then size,
 
 ## Next steps
 
+- Work through the [tutorials](tutorials/index.md): six scenarios on real repositories, from a Terraform backlog to a GitHub Actions check.
 - Learn the full [configuration](configuration.md) model.
 - Read how [fingerprints](guides/fingerprints.md) keep findings stable.
 - See what is coming on the [roadmap](roadmap.md).

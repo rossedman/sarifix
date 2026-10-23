@@ -91,6 +91,14 @@ nav:
   - Get started:
       - Getting started: getting-started.md
       - Configuration: configuration.md
+  - Tutorials:
+      - Overview: tutorials/index.md
+      - Triage an infrastructure backlog: tutorials/iac-backlog.md
+      - Check only what a pull request introduced: tutorials/pull-requests.md
+      - Compare against an older release: tutorials/release-history.md
+      - Bring your own scanner: tutorials/custom-scanner.md
+      - Roll out a policy across repositories: tutorials/org-policy.md
+      - Report on pull requests in GitHub Actions: tutorials/github-actions.md
   - Guides:
       - Fingerprints: guides/fingerprints.md
       - Modes: guides/modes.md
