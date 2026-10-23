@@ -85,21 +85,28 @@ that 'sarifix scan' records.`,
 
 // loadFindings loads SARIF globs and extracts findings against root.
 func (a *app) loadFindings(globs []string, root string) ([]finding.Finding, error) {
+	_, fs, err := a.loadLog(globs, root)
+	return fs, err
+}
+
+// loadLog loads SARIF globs, logs skipped inputs, and extracts findings
+// against root.
+func (a *app) loadLog(globs []string, root string) (*sarif.Log, []finding.Finding, error) {
 	log, warns, err := sarif.LoadGlobs(globs, sarif.Options{})
 	if err != nil {
 		if errors.Is(err, sarif.ErrNoFiles) {
-			return nil, &ExitError{Code: ExitRuntime, Err: err}
+			return nil, nil, &ExitError{Code: ExitRuntime, Err: err}
 		}
-		return nil, err
+		return nil, nil, err
 	}
 	for _, w := range warns {
 		a.log.Warn("SARIF input skipped", "source", w.Source, "run", w.Run, "reason", ui.Sanitize(w.Msg, 200))
 	}
 	ex, err := finding.NewExtractor(root)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	return ex.Extract(log), nil
+	return log, ex.Extract(log), nil
 }
 
 // printDiff renders a diff for people.

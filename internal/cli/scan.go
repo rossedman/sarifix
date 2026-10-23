@@ -189,10 +189,15 @@ func (a *app) printScan(results []scanResult, dryRun bool) error {
 	return nil
 }
 
-// plural formats a count with a singular or plural noun.
+// plural formats a count with a singular or plural noun ("batch" becomes
+// "batches").
 func plural(n int, noun string) string {
 	if n == 1 {
 		return "1 " + noun
 	}
-	return fmt.Sprintf("%d %ss", n, noun)
+	suffix := "s"
+	if strings.HasSuffix(noun, "ch") || strings.HasSuffix(noun, "s") || strings.HasSuffix(noun, "x") {
+		suffix = "es"
+	}
+	return fmt.Sprintf("%d %s%s", n, noun, suffix)
 }
