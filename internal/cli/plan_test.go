@@ -86,6 +86,12 @@ func TestPlanSelection(t *testing.T) {
 	if s.Batched != 0 || s.Deferred != 0 || s.Skipped["in_baseline"] == 0 {
 		t.Errorf("--baseline: %+v", s)
 	}
+	// The shifted fixture's SARIF has no recorded fingerprints, so its lines
+	// must be read from its own checkout to match.
+	s = summary("--baseline", filepath.Join(testdata, "sarif", "shifted", "*.sarif"), "--baseline-root", filepath.Join(testdata, "repos", "shifted"))
+	if s.Skipped["in_baseline"] != 25 {
+		t.Errorf("--baseline-root: %+v", s.Skipped)
+	}
 
 	for _, tc := range []struct {
 		args []string

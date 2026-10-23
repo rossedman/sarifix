@@ -33,13 +33,14 @@ sarifix fix [flags]
 ### Options
 
 ```
-      --baseline strings   SARIF of the base scan; findings also in it are skipped
-      --campaign string    only findings in this campaign
-  -h, --help               help for fix
-      --mode string        report, local, pr or review (default "report")
-      --out-dir string     report mode: directory for sarifix.sarif and summary.json, relative to --repo (default "sarifix-report")
-      --rule strings       only rule keys matching these globs, like trivy/DS-*
-      --sarif strings      SARIF files or globs to read (required)
+      --baseline strings       SARIF of the base scan; findings also in it are skipped
+      --baseline-root string   checkout the baseline was scanned in, for SARIF that 'sarifix scan' didn't write (default --repo)
+      --campaign string        only findings in this campaign
+  -h, --help                   help for fix
+      --mode string            report, local, pr or review (default "report")
+      --out-dir string         report mode: directory for sarifix.sarif and summary.json, relative to --repo (default "sarifix-report")
+      --rule strings           only rule keys matching these globs, like trivy/DS-*
+      --sarif strings          SARIF files or globs to read (required)
 ```
 
 ### Options inherited from parent commands

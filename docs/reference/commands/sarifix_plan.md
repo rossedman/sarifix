@@ -33,12 +33,13 @@ sarifix plan [flags]
 ### Options
 
 ```
-      --baseline strings   SARIF of the base scan; findings also in it are skipped
-      --campaign string    only findings in this campaign
-      --details            list every finding under its batch, and every skipped finding
-  -h, --help               help for plan
-      --rule strings       only rule keys matching these globs, like trivy/DS-*
-      --sarif strings      SARIF files or globs to read (required)
+      --baseline strings       SARIF of the base scan; findings also in it are skipped
+      --baseline-root string   checkout the baseline was scanned in, for SARIF that 'sarifix scan' didn't write (default --repo)
+      --campaign string        only findings in this campaign
+      --details                list every finding under its batch, and every skipped finding
+  -h, --help                   help for plan
+      --rule strings           only rule keys matching these globs, like trivy/DS-*
+      --sarif strings          SARIF files or globs to read (required)
 ```
 
 ### Options inherited from parent commands

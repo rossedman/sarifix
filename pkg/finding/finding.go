@@ -35,17 +35,21 @@ const primaryKey = "primaryLocationLineHash"
 // Finding is one SARIF result, normalized. Message and HelpText come from the
 // scanner and must be treated as untrusted.
 type Finding struct {
-	Tool        string `json:"tool"`
-	RuleID      string `json:"ruleId"`
-	Level       string `json:"level"`
-	Message     string `json:"message"`
-	Path        string `json:"path,omitempty"`
-	StartLine   int    `json:"startLine,omitempty"`
-	EndLine     int    `json:"endLine,omitempty"`
-	Snippet     string `json:"-"`
-	Fingerprint string `json:"fingerprint"`
-	HelpText    string `json:"-"`
-	Source      string `json:"source"`
+	Tool      string `json:"tool"`
+	RuleID    string `json:"ruleId"`
+	Level     string `json:"level"`
+	Message   string `json:"message"`
+	Path      string `json:"path,omitempty"`
+	StartLine int    `json:"startLine,omitempty"`
+	EndLine   int    `json:"endLine,omitempty"`
+	Snippet   string `json:"-"`
+	// SnippetFromFile is set when Snippet was read from the repo rather
+	// than taken from the SARIF, so it may come from a different checkout
+	// than the one scanned.
+	SnippetFromFile bool   `json:"-"`
+	Fingerprint     string `json:"fingerprint"`
+	HelpText        string `json:"-"`
+	Source          string `json:"source"`
 
 	Raw *sarif.Result `json:"-"`
 	// Run and ResultIndex locate Raw in its log, so sarifix can annotate it.
@@ -159,6 +163,7 @@ func (e *Extractor) locate(f *Finding, run *sarif.Run, res *sarif.Result) {
 		}
 		if f.Snippet == "" && f.StartLine > 0 {
 			f.Snippet = e.lines(p, f.StartLine, f.EndLine)
+			f.SnippetFromFile = f.Snippet != ""
 		}
 		return
 	}
@@ -323,13 +328,20 @@ func baseFingerprint(f *Finding) string {
 			}
 		}
 	}
-	if hasContent(f.Snippet) {
+	// A snippet the tool wrote is the truth about the scanned code.
+	if hasContent(f.Snippet) && !f.SnippetFromFile {
 		return SnippetHash(f.Tool, f.RuleID, f.Path, f.Snippet)
 	}
+	// sarifix/v1 was computed by `sarifix scan` from the checkout that was
+	// scanned, so it beats lines read now from files that may have changed
+	// since (a baseline scan of an older commit, read in a newer checkout).
 	if f.Raw != nil {
 		if v := f.Raw.PartialFingerprints[FingerprintKey]; v != "" {
 			return v
 		}
+	}
+	if hasContent(f.Snippet) {
+		return SnippetHash(f.Tool, f.RuleID, f.Path, f.Snippet)
 	}
 	// No snippet anywhere: the message is the best line-independent content.
 	return SnippetHash(f.Tool, f.RuleID, f.Path, "\x01"+f.Message)

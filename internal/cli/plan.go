@@ -20,16 +20,18 @@ func init() { register("", newPlanCmd) }
 
 // selection holds the flags plan and fix share.
 type selection struct {
-	sarif    []string
-	baseline []string
-	rules    []string
-	campaign string
+	sarif        []string
+	baseline     []string
+	baselineRoot string
+	rules        []string
+	campaign     string
 }
 
 // addFlags registers the shared selection flags on c.
 func (s *selection) addFlags(c *cobra.Command) {
 	c.Flags().StringSliceVar(&s.sarif, "sarif", nil, "SARIF files or globs to read (required)")
 	c.Flags().StringSliceVar(&s.baseline, "baseline", nil, "SARIF of the base scan; findings also in it are skipped")
+	c.Flags().StringVar(&s.baselineRoot, "baseline-root", "", "checkout the baseline was scanned in, for SARIF that 'sarifix scan' didn't write (default --repo)")
 	c.Flags().StringSliceVar(&s.rules, "rule", nil, "only rule keys matching these globs, like trivy/DS-*")
 	c.Flags().StringVar(&s.campaign, "campaign", "", "only findings in this campaign")
 	_ = c.MarkFlagRequired("sarif")
@@ -99,7 +101,11 @@ func (a *app) buildPlan(sel selection) (*plan.Plan, *sarif.Log, error) {
 	}
 	var base []finding.Finding
 	if len(sel.baseline) > 0 {
-		if _, base, err = a.loadLog(sel.baseline, repo); err != nil {
+		root := sel.baselineRoot
+		if root == "" {
+			root = repo
+		}
+		if _, base, err = a.loadLog(sel.baseline, root); err != nil {
 			return nil, nil, err
 		}
 	}
@@ -141,9 +147,11 @@ func (a *app) printPlan(w io.Writer, p *plan.Plan, details bool) error {
 		if _, err := fmt.Fprintf(w, "\n%s\n", s.Header.Render(sec.title)); err != nil {
 			return err
 		}
+		numWidth := len(fmt.Sprint(len(sec.batches))) + 1
+		indent := strings.Repeat(" ", 3+numWidth)
 		for i, b := range sec.batches {
 			if _, err := fmt.Fprintf(w, "  %s %s %s %s %s %s\n",
-				s.Dim.Render(fmt.Sprintf("%*s", len(fmt.Sprint(len(sec.batches)))+1, fmt.Sprintf("%d.", i+1))),
+				s.Dim.Render(fmt.Sprintf("%*s", numWidth, fmt.Sprintf("%d.", i+1))),
 				s.Key.Render(fmt.Sprintf("%-*s", idWidth, ui.Sanitize(b.ID, 80))),
 				levelStyle(a, fmt.Sprintf("%-7s", b.Level)),
 				s.Text.Render(fmt.Sprintf("%-*s", sizeWidth, batchSize(b))),
@@ -153,11 +161,11 @@ func (a *app) printPlan(w io.Writer, p *plan.Plan, details bool) error {
 			}
 			if details {
 				for _, e := range byBatch[b.ID] {
-					if err := a.printEntry(w, "     ", e); err != nil {
+					if err := a.printEntry(w, indent, e); err != nil {
 						return err
 					}
 				}
-			} else if _, err := fmt.Fprintf(w, "     %s\n", s.Dim.Render(ui.Sanitize(strings.Join(b.Files, ", "), 200))); err != nil {
+			} else if _, err := fmt.Fprintf(w, "%s%s\n", indent, s.Dim.Render(ui.Sanitize(strings.Join(b.Files, ", "), 200))); err != nil {
 				return err
 			}
 		}

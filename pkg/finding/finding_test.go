@@ -257,3 +257,40 @@ func BenchmarkSnippetHash(b *testing.B) {
 		SnippetHash("checkov", "CKV_AWS_18", "modules/m1/main.tf", snippet)
 	}
 }
+
+// TestRecordedFingerprintBeatsOtherCheckout covers a baseline scan of an
+// older commit read in a newer checkout: lines read from disk now are the
+// wrong lines, so the fingerprint `sarifix scan` recorded must win.
+func TestRecordedFingerprintBeatsOtherCheckout(t *testing.T) {
+	t.Parallel()
+	fs, log := extract(t, "basic/trivy.sarif", filepath.Join(testdata, "repos", "basic"))
+	Annotate(fs)
+	var buf bytes.Buffer
+	if err := log.Write(&buf); err != nil {
+		t.Fatal(err)
+	}
+	again, _, err := sarif.Parse(buf.Bytes(), "annotated", sarif.Options{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	// In the shifted checkout, Dockerfile line 2 is a comment, not the
+	// flagged RUN line.
+	ex, err := NewExtractor(filepath.Join(testdata, "repos", "shifted"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := ex.Extract(again)
+	for i, f := range got {
+		if f.RuleID != "DS-0025" {
+			continue
+		}
+		if !f.SnippetFromFile || f.Snippet == fs[i].Snippet {
+			t.Fatalf("test setup: snippet %q should come from the other checkout", f.Snippet)
+		}
+		if f.Fingerprint != fs[i].Fingerprint {
+			t.Errorf("fingerprint %s, want the recorded %s", f.Fingerprint, fs[i].Fingerprint)
+		}
+		return
+	}
+	t.Fatal("no DS-0025 finding")
+}

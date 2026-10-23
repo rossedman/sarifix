@@ -12,27 +12,27 @@ Batches
 
 Deferred (over limits.batches_per_run)
    1. checkov/CKV_AWS_24  error   1 finding in 1 file → sarifix/checkov/ckv_aws_24
-     checkov/CKV_AWS_24 main.tf:5
+      checkov/CKV_AWS_24 main.tf:5
    2. trivy/AWS-0086      error   1 finding in 1 file → sarifix/trivy/aws-0086
-     trivy/AWS-0086 main.tf:1
+      trivy/AWS-0086 main.tf:1
    3. trivy/AWS-0087      error   1 finding in 1 file → sarifix/trivy/aws-0087
-     trivy/AWS-0087 main.tf:1
+      trivy/AWS-0087 main.tf:1
    4. trivy/AWS-0091      error   1 finding in 1 file → sarifix/trivy/aws-0091
-     trivy/AWS-0091 main.tf:1
+      trivy/AWS-0091 main.tf:1
    5. trivy/AWS-0093      error   1 finding in 1 file → sarifix/trivy/aws-0093
-     trivy/AWS-0093 main.tf:1
+      trivy/AWS-0093 main.tf:1
    6. trivy/AWS-0107      error   1 finding in 1 file → sarifix/trivy/aws-0107
-     trivy/AWS-0107 main.tf:12
+      trivy/AWS-0107 main.tf:12
    7. trivy/AWS-0132      error   1 finding in 1 file → sarifix/trivy/aws-0132
-     trivy/AWS-0132 main.tf:1
+      trivy/AWS-0132 main.tf:1
    8. trivy/DS-0002       error   1 finding in 1 file → sarifix/trivy/ds-0002
-     trivy/DS-0002 Dockerfile:1
+      trivy/DS-0002 Dockerfile:1
    9. trivy/DS-0025       error   1 finding in 1 file → sarifix/trivy/ds-0025
-     trivy/DS-0025 Dockerfile:2
+      trivy/DS-0025 Dockerfile:2
   10. base-image-2026q4   warning 1 finding in 1 file → sarifix/campaign/base-image-2026q4
-     image-migrate/DEPRECATED_BASE Dockerfile:1
+      image-migrate/DEPRECATED_BASE Dockerfile:1
   11. trivy/AWS-0090      warning 1 finding in 1 file → sarifix/trivy/aws-0090
-     trivy/AWS-0090 main.tf:1
+      trivy/AWS-0090 main.tf:1
 
 Skipped
   unrouted         1
