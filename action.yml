@@ -44,6 +44,14 @@ inputs:
     description: Issues mode. Print what would change in the job summary without writing to GitHub.
     required: false
     default: "false"
+  dispatch:
+    description: >-
+      Issues mode. A workflow to start (its file name, like agent-queue.yml)
+      whenever this run queues issues, so the agent picks them up right away:
+      labels added with the job's token start no workflows. Needs actions
+      write. Started without inputs, on the default branch.
+    required: false
+    default: ""
   fail-on-new:
     description: Check mode. Fail the step when the pull request introduces findings.
     required: false
@@ -77,6 +85,9 @@ outputs:
   queued:
     description: Issues queued for an agent (issues mode).
     value: ${{ steps.issues.outputs.queued }}
+  dispatched:
+    description: Runs of the dispatch workflow started (issues mode).
+    value: ${{ steps.issues.outputs.dispatched }}
   new:
     description: Findings the pull request introduced (check mode).
     value: ${{ steps.check.outputs.new }}
@@ -140,6 +151,8 @@ runs:
         SARIF_DIR: ${{ steps.scan.outputs.sarif-dir }}
         QUEUE: ${{ inputs.queue }}
         DRY_RUN: ${{ inputs.dry-run }}
+        DISPATCH: ${{ inputs.dispatch }}
+        DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
       run: '"$GITHUB_ACTION_PATH/scripts/action/issues.sh"'
 
     - name: Check the pull request
