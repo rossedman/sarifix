@@ -39,7 +39,7 @@ type Config struct {
 type Scanner struct {
 	Name    string            `yaml:"name" json:"name" doc:"Unique ID, used in rule keys and branch names." required:"true"`
 	Match   []string          `yaml:"match" json:"match" doc:"SARIF tool.driver.name values routed to this scanner (case-insensitive)." default:"[name]"`
-	Command []string          `yaml:"command" json:"command" doc:"argv to run, no shell. Placeholders are expanded per element." required:"true"`
+	Command []string          `yaml:"command" json:"command" doc:"argv to run, no shell. Placeholders are expanded per element. Leave it out for an imported scanner, whose findings come from code scanning (sarifix alerts export) instead, such as CodeQL."`
 	Output  string            `yaml:"output" json:"output" doc:"Where the SARIF lands, for tools that choose their own file name." default:"{out}"`
 	Workdir string            `yaml:"workdir" json:"workdir" doc:"Working directory for the command." default:"{repo}"`
 	Env     map[string]string `yaml:"env" json:"env,omitempty" doc:"Extra environment variables."`
@@ -173,6 +173,23 @@ func (c *Config) applyScannerDefaults() {
 			s.Timeout = Duration(5 * time.Minute)
 		}
 	}
+}
+
+// Imported reports whether s has no command: sarifix never runs it, and its
+// findings come from elsewhere, such as code scanning alerts.
+func (s Scanner) Imported() bool {
+	return len(s.Command) == 0
+}
+
+// Runnable returns the scanners sarifix runs: those with a command.
+func (c *Config) Runnable() []Scanner {
+	var out []Scanner
+	for _, s := range c.Scanners {
+		if !s.Imported() {
+			out = append(out, s)
+		}
+	}
+	return out
 }
 
 // Scanner returns the scanner with the given name.

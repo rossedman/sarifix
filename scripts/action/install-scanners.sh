@@ -22,7 +22,7 @@ config=${CONFIG:-sarifix.yaml}
 
 names=()
 if [[ $scanners == auto ]]; then
-  mapfile -t names < <(sarifix config validate --config "$config" --json | jq -r '.scanners[].name')
+  mapfile -t names < <(sarifix config validate --config "$config" --json | jq -r '.scanners[] | select((.command // []) | length > 0) | .name')
 else
   IFS=, read -ra names <<<"$scanners"
 fi

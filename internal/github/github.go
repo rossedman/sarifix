@@ -1,6 +1,6 @@
 // Package github is a minimal GitHub REST client: the issue calls
-// `sarifix fix --mode issues` needs, nothing more. It implements
-// publish.Tracker.
+// `sarifix fix --mode issues` needs (it implements publish.Tracker), and
+// reading code scanning alerts for `sarifix alerts export`, nothing more.
 package github
 
 import (

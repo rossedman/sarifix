@@ -95,7 +95,7 @@ func TestLayeredErrorsPointAtSourceFile(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
 	org := write(t, dir, "org.yaml", "version: 1\nscanners:\n  - name: a\n    command: [a, \"{bogus}\"]\n")
-	repo := write(t, dir, "repo.yaml", "version: 1\nscanners:\n  - name: b\n    command: []\n")
+	repo := write(t, dir, "repo.yaml", "version: 1\nscanners:\n  - name: b\n    command: [\"\"]\n")
 	l, err := LoadLayered(org, repo)
 	if err != nil {
 		t.Fatal(err)
@@ -153,7 +153,7 @@ scanners:
     command: []
   - name: b
     command: [""]
-`, false, []string{"x.yaml:5: scanners[0].command: must not be empty", "x.yaml:7: scanners[1].command: must not be empty"}},
+`, false, []string{"x.yaml:7: scanners[1].command: must not be empty"}},
 		{"issues labels", `
 version: 1
 publish:

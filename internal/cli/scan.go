@@ -95,19 +95,23 @@ most tools exit non-zero when they find something.`,
 	return c
 }
 
-// selectScanners returns the named scanners, or all of them.
+// selectScanners returns the named scanners, or every scanner with a
+// command. Imported scanners have nothing to run.
 func selectScanners(cfg *config.Config, names []string) ([]config.Scanner, error) {
-	if len(cfg.Scanners) == 0 {
-		return nil, errors.New("no scanners configured in sarifix.yaml")
+	if len(cfg.Runnable()) == 0 {
+		return nil, errors.New("no scanners with a command in sarifix.yaml")
 	}
 	if len(names) == 0 {
-		return cfg.Scanners, nil
+		return cfg.Runnable(), nil
 	}
 	var out []config.Scanner
 	for _, n := range names {
 		s, ok := cfg.Scanner(n)
 		if !ok {
 			return nil, fmt.Errorf("unknown scanner %q", n)
+		}
+		if s.Imported() {
+			return nil, fmt.Errorf("scanner %q has no command: its findings come from code scanning (sarifix alerts export)", n)
 		}
 		out = append(out, *s)
 	}

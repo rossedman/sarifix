@@ -189,10 +189,11 @@ type Registry struct {
 	scanners []Scanner
 }
 
-// NewRegistry builds Exec scanners for every configured scanner.
+// NewRegistry builds Exec scanners for every configured scanner that has a
+// command; imported scanners are never run.
 func NewRegistry(cfg *config.Config) *Registry {
 	r := &Registry{}
-	for _, s := range cfg.Scanners {
+	for _, s := range cfg.Runnable() {
 		r.scanners = append(r.scanners, NewExec(s))
 	}
 	return r
