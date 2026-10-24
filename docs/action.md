@@ -20,7 +20,7 @@ That's the whole setup. Only rules listed in `rules.allow` become issues, and no
 | `mode` | What it does | Permissions |
 | --- | --- | --- |
 | `auto` (default) | `check` on pull requests, `issues` on every other event | as below |
-| `issues` | Scan, upload to code scanning, then open, refresh, close and queue one issue per batch | `contents: read`, `security-events: write`, `actions: read` (private repos), `issues: write` |
+| `issues` | Scan, upload to code scanning, then open, refresh, close and queue one issue per batch | `contents: read`, `security-events: write`, `actions: read` (private repos; `write` with `dispatch`), `issues: write` |
 | `scan` | Scan and upload to code scanning only | `contents: read`, `security-events: write`, `actions: read` (private repos) |
 | `check` | Scan the merge base and the pull request with the pull request's `sarifix.yaml`, then write the new findings to the job summary and as warnings. Needs `fetch-depth: 0` | `contents: read` |
 | `install` | Install sarifix and the scanners, for a later step to use, such as an agent fixing a sarifix issue | `contents: read` |
@@ -36,6 +36,7 @@ That's the whole setup. Only rules listed in `rules.allow` become issues, and no
 | `sarif-category` | `sarifix` | The code scanning category |
 | `queue` | (config) | Issues mode: how many issues to keep labeled `agent-ready`. Empty uses `publish.issues.queue`. Above 0, this starts paid agent runs |
 | `dry-run` | `false` | Issues mode: show the changes in the job summary without making them |
+| `dispatch` | | Issues mode: a workflow file name, such as `agent-queue.yml`, to start for each issue this run queues, with the issue number as its `issue` input. A workflow without that input is started once and picks the oldest `agent-ready` issue. Needs `actions: write`. See [Start the agent right away](#start-the-agent-right-away) |
 | `fail-on-new` | `false` | Check mode: fail the step when the pull request introduces findings |
 | `version` | the action's tag | The sarifix release to install, such as `v0.2.3`. Without a tag (a branch or SHA reference), the latest release |
 | `install` | `true` | Set `false` to use a sarifix already on `PATH` |
@@ -48,7 +49,28 @@ That's the whole setup. Only rules listed in `rules.allow` become issues, and no
 | `mode` | The mode that ran |
 | `sarif-dir` | Directory of the per-scanner SARIF files (issues and scan modes) |
 | `opened`, `closed`, `queued` | Issues changed (issues mode) |
+| `dispatched` | Runs of the `dispatch` workflow started (issues mode) |
 | `new` | Findings the pull request introduced (check mode) |
+
+## Start the agent right away
+
+GitHub starts no workflows from events made with the job's token, so an `agent-ready` label the action adds doesn't trigger the queue's `issues: labeled` event. Without `dispatch`, the queue only sees the issue on its own schedule. With it, the action starts the queue workflow through the API, which does start runs:
+
+```yaml
+permissions:
+  contents: read
+  actions: write # start agent-queue.yml
+  security-events: write
+  issues: write
+steps:
+  - uses: actions/checkout@v7
+  - uses: rossedman/sarifix@v0.2.3
+    with:
+      queue: ${{ vars.SARIFIX_QUEUE }}
+      dispatch: agent-queue.yml
+```
+
+That closes the loop: a merged fix pushes to the default branch, the scan closes its issue and queues the next one, and the dispatch starts the agent on it. Runs start on the default branch. A failed dispatch is a warning, not a failure, since the issues are already in place.
 
 ## Scanners the action installs
 

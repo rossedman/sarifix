@@ -24,7 +24,7 @@ jobs:
     timeout-minutes: 30
     permissions:
       contents: read
-      actions: read # upload-sarif reads the run's metadata on private repos
+      actions: write # start agent-queue.yml (dispatch); upload-sarif reads run metadata
       security-events: write # code scanning upload
       issues: write # one issue per batch
     steps:
@@ -35,8 +35,10 @@ jobs:
       # Installs sarifix and the scanners sarifix.yaml names, then scans.
       # SARIFIX_QUEUE (a repository variable) above 0 labels that many
       # issues agent-ready, which starts paid agent runs; leave it unset to
-      # queue issues by hand.
+      # queue issues by hand. dispatch starts agent-queue.yml for each issue
+      # queued, since labels added with the job's token start no workflows.
       # A tag reads better in an example; pin the tag's commit SHA in your repo.
       - uses: rossedman/sarifix@v0.2.3 # zizmor: ignore[unpinned-uses]
         with:
           queue: ${{ vars.SARIFIX_QUEUE }}
+          dispatch: agent-queue.yml

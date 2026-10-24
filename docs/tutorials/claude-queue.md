@@ -126,13 +126,13 @@ That writes `.github/workflows/agent-queue.yml`, creates the `agent-ready`, `age
 Now label an issue `agent-ready`, by hand or with `SARIFIX_QUEUE`, and Claude picks it up.
 
 !!! note "Labels added by the scan don't start a run on their own"
-    GitHub doesn't start workflows from events made with `GITHUB_TOKEN`, so an `agent-ready` label added by the sarifix workflow doesn't trigger `agent-queue.yml`'s `issues: labeled` event. The queue's nightly schedule picks up the oldest `agent-ready` issue instead. A label you add yourself starts a run immediately.
+    GitHub doesn't start workflows from events made with `GITHUB_TOKEN`, so an `agent-ready` label added by the sarifix workflow doesn't trigger `agent-queue.yml`'s `issues: labeled` event. The example workflow's `dispatch: agent-queue.yml` starts the queue through the API instead, once per queued issue, which is why its job has `actions: write`. Without it, the queue's nightly schedule picks up the oldest `agent-ready` issue. A label you add yourself starts a run immediately.
 
 ## 4. Turn it on gradually
 
 1. **Report only.** To preview, set `dry-run: "true"` on the action and run the workflow from the Actions tab: the job summary lists the issues it would open. Then remove it, run it again, and read the issues it opened. If an issue lists findings you won't fix, deny the rule (`rules.deny`) or narrow `rules.allow`. The next run closes those issues.
 2. **Queue by hand.** Label one issue `agent-ready`, then review the pull request Claude opens. The issue's acceptance criteria are the review checklist.
-3. **Queue automatically.** Set the repository variable `SARIFIX_QUEUE` to `1`. From then on, each push to `main` and each weekly run keeps one batch in flight: the nightly queue run fixes it, you review and merge, and the push scan queues the next.
+3. **Queue automatically.** Set the repository variable `SARIFIX_QUEUE` to `1`. From then on, each push to `main` and each weekly run keeps one batch in flight: the dispatched queue run fixes it, you review and merge, and the push scan queues the next and starts the agent on it.
 
 Agent pull requests still go through your branch rulesets, so they need review and green checks before they merge.
 
