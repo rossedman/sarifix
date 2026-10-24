@@ -14,7 +14,7 @@ flowchart LR
 ## What you need
 
 - sarifix v0.2.3 or later, the first release with `--mode issues` and the GitHub Action.
-- A repository with a `sarifix.yaml` whose `rules.allow` lists the rules you want fixed. Only allowed rules become issues: that list is the fixing policy, and everything else is still scanned and uploaded.
+- A repository with a `sarifix.yaml` whose `rules.allow` lists the rules you want fixed. Only allowed rules become issues: that list is the fixing policy, and everything else is still scanned and uploaded. To include CodeQL's alerts too, add it as an [imported scanner](../configuration.md#imported-scanners).
 - The [task-queue](https://github.com/rossedman/claude/tree/main/plugins/task-queue) Claude Code plugin, for the agent side. Its `agent-queue.yml` turns an `agent-ready` issue into a pull request.
 - For the code scanning upload on a private repository, GitHub Code Security. Without it, delete the upload step; the issues don't depend on it.
 

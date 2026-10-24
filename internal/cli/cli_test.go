@@ -75,7 +75,7 @@ func TestConfigValidate(t *testing.T) {
 	}
 	out, _, _ = run(t, "config", "validate", "--config", example, "--json")
 	var cfg config.Config
-	if err := json.Unmarshal([]byte(out), &cfg); err != nil || len(cfg.Scanners) != 4 {
+	if err := json.Unmarshal([]byte(out), &cfg); err != nil || len(cfg.Scanners) != 5 {
 		t.Errorf("json: %v %s", err, out)
 	}
 

@@ -7,6 +7,7 @@ scanners:
     command: ["trivy", "config", "--format", "sarif", "-o", "{out}", "{dir}"]
     timeout: 5m
     offline: true # verify must work without network
+    group_by: file # overrides limits.group_by for this scanner
 
   - name: checkov
     match: ["Checkov"]
@@ -26,12 +27,18 @@ scanners:
     env: { CT_MODE: "ci" }
     scope: changed
 
+  # An imported scanner: no command. sarifix never runs it; `sarifix alerts
+  # export` (and the GitHub Action) read its open code scanning alerts.
+  - name: codeql
+    match: ["CodeQL"]
+
 rules:
   allow: # globs on "<scanner>/<ruleId>"
     - trivy/DS-0002
     - checkov/CKV_AWS_*
     - golangci-lint/errcheck
     - image-migrate/*
+    - codeql/go/*
   deny: ["*/secrets-*"]
   min_level: warning
 

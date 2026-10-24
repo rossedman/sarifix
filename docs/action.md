@@ -20,7 +20,7 @@ That's the whole setup. Only rules listed in `rules.allow` become issues, and no
 | `mode` | What it does | Permissions |
 | --- | --- | --- |
 | `auto` (default) | `check` on pull requests, `issues` on every other event | as below |
-| `issues` | Scan, upload to code scanning, then open, refresh, close and queue one issue per batch | `contents: read`, `security-events: write`, `actions: read` (private repos; `write` with `dispatch`), `issues: write` |
+| `issues` | Scan, upload to code scanning, read open alerts for [imported scanners](configuration.md#imported-scanners), then open, refresh, close and queue one issue per batch | `contents: read`, `security-events: write`, `actions: read` (private repos; `write` with `dispatch`), `issues: write` |
 | `scan` | Scan and upload to code scanning only | `contents: read`, `security-events: write`, `actions: read` (private repos) |
 | `check` | Scan the merge base and the pull request with the pull request's `sarifix.yaml`, then write the new findings to the job summary and as warnings. Needs `fetch-depth: 0` | `contents: read` |
 | `install` | Install sarifix and the scanners, for a later step to use, such as an agent fixing a sarifix issue | `contents: read` |
@@ -51,6 +51,10 @@ That's the whole setup. Only rules listed in `rules.allow` become issues, and no
 | `opened`, `closed`, `queued` | Issues changed (issues mode) |
 | `dispatched` | Runs of the `dispatch` workflow started (issues mode) |
 | `new` | Findings the pull request introduced (check mode) |
+
+## Alerts from tools sarifix doesn't run
+
+Add a scanner with no `command` to `sarifix.yaml`, such as `- name: codeql` with `match: [CodeQL]`, and issues mode also turns that tool's open code scanning alerts into issues. The action runs `sarifix alerts export` before syncing, writes the alerts outside the SARIF it uploads, and warns instead of failing when it can't read them. The job's `security-events: write` covers reading. See [Imported scanners](configuration.md#imported-scanners).
 
 ## Start the agent right away
 

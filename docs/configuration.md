@@ -22,7 +22,7 @@ paths:         # files that are never edited
   deny: ["vendor/**", "**/*_generated.go"]
 ```
 
-Run `sarifix config validate` to load the file, apply defaults and print the resolved result. Errors name the file, the key path and the line, for example `scanners[2].command: must not be empty`. There are 29 checks, covering unknown placeholders, duplicate scanner names, overlapping `match` values, empty commands, campaigns that reference an unknown scanner, bad globs and out-of-range limits. Add `--strict` to also reject an `allow` glob that matches no configured scanner.
+Run `sarifix config validate` to load the file, apply defaults and print the resolved result. Errors name the file, the key path and the line, for example `scanners[2].command: must not be empty`. There are 30 checks, covering unknown placeholders, duplicate scanner names, overlapping `match` values, empty commands, campaigns that reference an unknown scanner, bad globs and out-of-range limits. Add `--strict` to also reject an `allow` glob that matches no configured scanner.
 
 !!! note "Which sections do something today"
     `scanners` drives `sarifix scan`. `rules`, `paths`, `limits`, `verify`, `agent`, `publish` and `campaigns` are validated now and used by the fixing phases on the [roadmap](roadmap.md).
@@ -35,13 +35,14 @@ A scanner is any command that writes SARIF. sarifix needs to know three things: 
 | --- | --- |
 | `name` | Unique ID. Used in rule keys such as `trivy/DS-0002` and in branch names. |
 | `match` | The `tool.driver.name` values routed to this scanner. Defaults to `[name]`, compared case-insensitively. |
-| `command` | The argv to run. There is no shell. Placeholders are expanded in each element. |
+| `command` | The argv to run. There is no shell. Placeholders are expanded in each element. Leave it out for an [imported scanner](#imported-scanners). |
 | `output` | Where the SARIF lands, for tools that choose their own file name. Default `{out}`. |
 | `workdir` | Working directory. Default `{repo}`. |
 | `env` | Extra environment variables. |
 | `scope` | Rescan scope during verification: `changed`, `dir` or `repo`. |
 | `timeout` | Per invocation. Default 5 minutes. |
 | `offline` | Run verification rescans without network. |
+| `group_by` | Overrides [`limits.group_by`](#batches) for this scanner's findings. |
 
 A tool that is not a known scanner needs no code. The repo's custom-tool fixture is a 25-line shell script that prints SARIF, wired in with this entry:
 
@@ -51,6 +52,26 @@ A tool that is not a known scanner needs no code. The repo's custom-tool fixture
   env: { CT_MODE: "ci" }
   scope: changed
 ```
+
+### Imported scanners
+
+Some tools already report to GitHub code scanning and don't run well from a script, such as CodeQL. A scanner with no `command` is *imported*: sarifix never runs it, and `sarifix scan`, `sarifix check` and the Stop hook skip it. Instead, `sarifix alerts export` reads the repository's open code scanning alerts for it and writes them as SARIF. Plan, batching and issues mode then treat them like any other finding:
+
+```yaml
+scanners:
+  - name: codeql
+    match: [CodeQL]   # the alerts' tool name
+rules:
+  allow: ["codeql/*"]
+```
+
+```console
+$ sarifix alerts export
+✓ codeql 4 open alerts → sarif/code-scanning.sarif
+$ sarifix plan --sarif 'sarif/*.sarif'
+```
+
+The [GitHub Action](action.md) runs the export itself in issues mode, so adding the entry is the whole setup. Alerts from tools that no imported scanner matches are left out, since sarifix's own scan already covers the scanners it runs. Issues for imported findings can't list a rescan to prove the fix, so their **Done when** points at the pull request's code scanning results. Reading alerts needs a token with `security-events` read. See [ADR 9](adr/0009-imported-scanners.md).
 
 ### Placeholders
 
@@ -113,6 +134,16 @@ For example, on a repository where Trivy flags eight settings in one manifest an
 ```yaml
 limits:
   group_by: auto
+```
+
+A scanner can override it. When Trivy flags the same checks in several Kubernetes manifests, `auto` merges nothing, because each rule is in more than one file. Grouping only Trivy by file gives one batch per manifest and leaves the other scanners' rules alone:
+
+```yaml
+scanners:
+  - name: trivy
+    match: [Trivy]
+    command: ["trivy", "config", "--quiet", "--format", "sarif", "-o", "{out}", "{dir}"]
+    group_by: file
 ```
 
 Changing `group_by` changes batch IDs, so issues mode closes the old issues and opens the regrouped ones. See [ADR 8](adr/0008-group-by.md).
