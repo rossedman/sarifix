@@ -165,14 +165,20 @@ func (a *app) fixIssues(cmd *cobra.Command, p *plan.Plan, log *sarif.Log, f issu
 	}
 	batches := append(append([]group.Batch(nil), p.Batches.Run...), p.Batches.Deferred...)
 	scanned := scannedBy(l.Config, log)
+	imported := map[string]bool{}
 	for _, s := range l.Scanners {
-		if !scanned[s.Name] {
+		imported[s.Name] = s.Imported()
+		switch {
+		case scanned[s.Name]:
+		case s.Imported():
+			a.log.Warn("no code scanning alerts read for this imported scanner (sarifix alerts export), so its issues stay open", "scanner", s.Name)
+		default:
 			a.log.Warn("no SARIF from this scanner, so its issues stay open", "scanner", s.Name)
 		}
 	}
 	actions, err := publish.Issues(ctx, gh, batches, publish.IssuesOptions{
 		Label: cfg.Label, MaxOpen: cfg.MaxOpen, Queue: cfg.Queue, QueueLabel: cfg.QueueLabel, Links: links,
-		Scanned: scanned, DryRun: f.dryRun,
+		Scanned: scanned, Imported: imported, DryRun: f.dryRun,
 	})
 	if a.jsonOut() {
 		if err != nil {

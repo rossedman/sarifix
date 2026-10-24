@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Keep one GitHub issue per batch (sarifix fix --mode issues) for the GitHub
 # Action (action.yml), and record the actions as outputs and in the job
-# summary. QUEUE, when set, overrides publish.issues.queue. DISPATCH, when
+# summary. Open code scanning alerts for imported scanners are read too.
+# QUEUE, when set, overrides publish.issues.queue. DISPATCH, when
 # set, names a workflow to start for each issue this run queued, with the
 # issue number as its issue input: labels added with the job's token start no
 # workflows, so without it the agent queue only sees them on its own schedule.
@@ -10,6 +11,16 @@ set -euo pipefail
 args=(fix --mode issues --config "${CONFIG:-sarifix.yaml}" --sarif "$SARIF_DIR/*.sarif" --json --log-level warn)
 [[ -n ${QUEUE:-} ]] && args+=(--queue "$QUEUE")
 [[ ${DRY_RUN:-false} == true ]] && args+=(--dry-run)
+# Imported scanners (no command, such as CodeQL) get their open alerts from
+# code scanning. It's written outside SARIF_DIR so the upload step never
+# sends the alerts back. Without imported scanners this writes nothing.
+alerts="${RUNNER_TEMP:-/tmp}/sarifix/code-scanning.sarif"
+rm -f "$alerts"
+if sarifix alerts export --config "${CONFIG:-sarifix.yaml}" --out "$alerts" --log-level warn; then
+  [[ -f $alerts ]] && args+=(--sarif "$alerts")
+else
+  echo "::warning title=sarifix::couldn't read code scanning alerts, so imported scanners' issues are left as they are"
+fi
 out="${RUNNER_TEMP:-/tmp}/sarifix/issues.json"
 sarifix "${args[@]}" >"$out"
 

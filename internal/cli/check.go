@@ -248,8 +248,8 @@ func (a *app) runCheck(cmd *cobra.Command, o checkOptions) (checkResult, error) 
 	if err != nil {
 		return checkResult{}, err
 	}
-	if len(l.Scanners) == 0 {
-		return checkResult{}, &ExitError{Code: ExitConfig, Err: errors.New("no scanners configured in sarifix.yaml")}
+	if len(l.Runnable()) == 0 {
+		return checkResult{}, &ExitError{Code: ExitConfig, Err: errors.New("no scanners with a command in sarifix.yaml")}
 	}
 
 	res := checkResult{New: []checkFinding{}}
@@ -280,7 +280,7 @@ func (a *app) runCheck(cmd *cobra.Command, o checkOptions) (checkResult, error) 
 		return checkResult{}, err
 	}
 	defer os.RemoveAll(head) //nolint:errcheck // best-effort cleanup
-	for _, spec := range l.Scanners {
+	for _, spec := range l.Runnable() {
 		if r := a.runScan(cmd, spec, root, head); r.Error != "" {
 			failed[spec.Name] = true
 		}
@@ -384,7 +384,7 @@ func (a *app) baseScan(cmd *cobra.Command, cfg *config.Config, root, sha string,
 		return "", nil, err
 	}
 	var failed []string
-	for _, spec := range cfg.Scanners {
+	for _, spec := range cfg.Runnable() {
 		if r := a.runScan(cmd, spec, wt, staging); r.Error != "" {
 			failed = append(failed, spec.Name)
 		}

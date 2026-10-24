@@ -80,7 +80,7 @@ func (v *validator) scanners() {
 		}
 		seen[s.Name] = true
 
-		if len(s.Command) == 0 || s.Command[0] == "" {
+		if len(s.Command) > 0 && s.Command[0] == "" {
 			v.add(p+".command", "must not be empty")
 		}
 		for j, a := range s.Command {

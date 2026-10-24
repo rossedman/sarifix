@@ -163,12 +163,13 @@ func TestScanBadTemplates(t *testing.T) {
 func TestRegistry(t *testing.T) {
 	t.Parallel()
 	cfg := &config.Config{Scanners: []config.Scanner{
-		{Name: "trivy", Match: []string{"Trivy"}},
-		{Name: "checkov", Match: []string{"Checkov", "checkov-legacy"}},
+		{Name: "trivy", Match: []string{"Trivy"}, Command: []string{"trivy"}},
+		{Name: "checkov", Match: []string{"Checkov", "checkov-legacy"}, Command: []string{"checkov"}},
+		{Name: "codeql", Match: []string{"CodeQL"}},
 	}}
 	r := NewRegistry(cfg)
 	if len(r.All()) != 2 {
-		t.Fatal("scanners missing")
+		t.Fatal("want the two scanners with a command")
 	}
 	if s, ok := r.Route("TRIVY"); !ok || s.Name() != "trivy" {
 		t.Error("case-insensitive route failed")

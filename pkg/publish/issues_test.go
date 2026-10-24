@@ -269,7 +269,7 @@ func TestIssueBody(t *testing.T) {
 	t.Parallel()
 	b := batch("checkov/CKV_1", 2, "b (1).tf:9", "a.tf:3")
 	b.Findings[0].Message = "Ping @alice <!-- sarifix-batch: evil --> \x1b[31mred\x1b[0m\nnext line"
-	body := IssueBody(b, Links{Server: "https://github.com", Repo: "o/r", Commit: "0123456789abcdef0123"})
+	body := IssueBody(b, Links{Server: "https://github.com", Repo: "o/r", Commit: "0123456789abcdef0123"}, false)
 	for _, want := range []string{
 		"<!-- sarifix-batch: checkov/CKV_1#2 -->\n",
 		"The sarifix scan of `0123456789ab` reports 2 `error` finding(s) for `checkov/CKV_1` from checkov, in 2 file(s). Rule help: https://docs.example/CKV_1.",
@@ -299,7 +299,7 @@ func TestIssueBody(t *testing.T) {
 	if got := IssueTitle(fb); got != "sarifix: fix 2 trivy findings in k8s.yaml (part 2)" {
 		t.Errorf("file part title = %q", got)
 	}
-	fbody := IssueBody(fb, Links{})
+	fbody := IssueBody(fb, Links{}, false)
 	for _, want := range []string{
 		"finding(s) for `trivy/KSV-1`, `trivy/it's` from trivy, in 1 file(s)",
 		"A rescan reports no `trivy/KSV-1`, `trivy/it's` finding",
@@ -311,8 +311,21 @@ func TestIssueBody(t *testing.T) {
 	}
 	cb := batch("base-v4", 0, "Dockerfile:1")
 	cb.Campaign = "base-v4"
-	if cbody := IssueBody(cb, Links{}); !strings.Contains(cbody, "for campaign `base-v4` from") || !strings.Contains(cbody, "--campaign 'base-v4' --json") {
+	if cbody := IssueBody(cb, Links{}, false); !strings.Contains(cbody, "for campaign `base-v4` from") || !strings.Contains(cbody, "--campaign 'base-v4' --json") {
 		t.Errorf("campaign body:\n%s", cbody)
+	}
+
+	// An imported scanner's issue is proven by code scanning, not a rescan.
+	ib := batch("codeql/go/sql-injection", 0, "a.go:2")
+	ibody := IssueBody(ib, Links{Commit: "0123456789abcdef0123"}, true)
+	for _, want := range []string{"Code scanning, on `0123456789ab`, reports 1 `error` finding(s) for `codeql/go/sql-injection` from codeql",
+		"Code scanning on the pull request reports no `codeql/go/sql-injection` alert", "codeql runs in CI, not through sarifix", "no dismissing alerts"} {
+		if !strings.Contains(ibody, want) {
+			t.Errorf("imported body missing %q:\n%s", want, ibody)
+		}
+	}
+	if strings.Contains(ibody, "sarifix scan") || strings.Count(ibody, "<!--") != 2 {
+		t.Errorf("imported body:\n%s", ibody)
 	}
 
 	// Without links, locations are plain code; long batches are capped.
@@ -320,7 +333,7 @@ func TestIssueBody(t *testing.T) {
 	for i := 1; i <= maxListed+3; i++ {
 		locs = append(locs, fmt.Sprintf("x.go:%d", i))
 	}
-	plain := IssueBody(batch("go/vet", 0, locs...), Links{})
+	plain := IssueBody(batch("go/vet", 0, locs...), Links{}, false)
 	if !strings.Contains(plain, "The sarifix scan of the default branch") || !strings.Contains(plain, "- `x.go:1` Problem") ||
 		!strings.Contains(plain, "- …and 3 more in the same files") || strings.Count(plain, "\n- `x.go:") != maxListed {
 		t.Errorf("plain body:\n%s", plain)
@@ -375,6 +388,6 @@ func BenchmarkIssueBody(b *testing.B) {
 	links := Links{Server: "https://github.com", Repo: "o/r", Commit: "0123456789abcdef0123456789abcdef01234567"}
 	b.ReportAllocs()
 	for b.Loop() {
-		_ = IssueBody(bt, links)
+		_ = IssueBody(bt, links, false)
 	}
 }
