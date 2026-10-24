@@ -1,31 +1,110 @@
 # Configuration
 
-How `sarifix.yaml` is put together: scanners, the placeholders in their commands, the globs in `rules` and `paths`, and how an org default file layers under a repo file. This page is the guide; the [config reference](reference/config.md) lists every field, type and default.
+`sarifix.yaml` tells sarifix how to run your scanners and which of their findings to act on. This page starts with a config that works, explains how a finding becomes an issue, and shows how to find out why one didn't. The sections after that cover each part of the file. The [config reference](reference/config.md) lists every field, type and default.
 
-## The shape of the file
+## Start here
 
-One YAML file per repo. `version: 1` is required, and every other key has a default except `scanners`.
+One YAML file at the repo root. This one runs Trivy and Semgrep, imports CodeQL's alerts from code scanning, and turns every finding into an issue:
 
 ```yaml title="sarifix.yaml"
 version: 1
 
-scanners:      # how to run each SARIF-producing tool
+scanners:                 # what to run, and which SARIF tool names it reports as
   - name: trivy
     match: ["Trivy"]
-    command: ["trivy", "config", "--format", "sarif", "-o", "{out}", "{dir}"]
+    command: ["trivy", "config", "--quiet", "--format", "sarif", "-o", "{out}", "{dir}"]
+    group_by: file        # one issue per file, not per check
+  - name: semgrep
+    match: ["Semgrep OSS", "Semgrep"]
+    command: ["semgrep", "scan", "--quiet", "--metrics=off", "--config", "p/default", "--sarif-output={out}", "{dir}"]
+    timeout: 10m
+  - name: codeql          # no command: its alerts come from code scanning
+    match: ["CodeQL"]
 
-rules:         # which findings are eligible to be fixed (planned phases)
-  allow: ["trivy/DS-0002"]
-  min_level: warning
+rules:                    # which findings sarifix acts on
+  allow: ["trivy/*", "semgrep/*", "codeql/*"]
+  min_level: note         # every level; the default, warning, drops notes
 
-paths:         # files that are never edited
-  deny: ["vendor/**", "**/*_generated.go"]
+paths:
+  deny: ["vendor/**", "**/testdata/**"]
+
+publish:
+  issues:
+    max_open: 20          # issues open at once; the rest wait their turn
+    queue: 0              # issues handed to an agent; 0 hands over none
 ```
 
-Run `sarifix config validate` to load the file, apply defaults and print the resolved result. Errors name the file, the key path and the line, for example `scanners[2].command: must not be empty`. There are 30 checks, covering unknown placeholders, duplicate scanner names, overlapping `match` values, empty commands, campaigns that reference an unknown scanner, bad globs and out-of-range limits. Add `--strict` to also reject an `allow` glob that matches no configured scanner.
+Check it with `sarifix config validate`. It applies the defaults and prints the resolved config. Errors name the file, the key and the line, such as `scanners[2].command: must not be empty`. There are 30 checks. Add `--strict` to also reject an `allow` glob that matches no scanner.
 
-!!! note "Which sections do something today"
-    `scanners` drives `sarifix scan`. `rules`, `paths`, `limits`, `verify`, `agent`, `publish` and `campaigns` are validated now and used by the fixing phases on the [roadmap](roadmap.md).
+## From finding to issue
+
+Every finding your scanners report is uploaded to code scanning, so the Security tab shows all of them. Only some become issues. A finding has to pass each check below, in this order. Then it's grouped into a batch, and each batch is one issue:
+
+```mermaid
+flowchart LR
+  A[scanners report findings] --> B[code scanning<br>shows every finding]
+  A --> C{rules and paths}
+  C -->|skipped| D[no issue]
+  C -->|kept| E[batches<br>group_by]
+  E --> F[issues<br>up to max_open]
+```
+
+| Check | Setting | Default | Skip reason in `plan` |
+| --- | --- | --- | --- |
+| The SARIF tool name matches a scanner | `scanners[].match` | the scanner's `name` | `unrouted` |
+| It points at a file in the repo | | | `no_location` |
+| It's not in the baseline (only with `--baseline`) | | | `in_baseline` |
+| Its level is at least `min_level` | `rules.min_level` | `warning` | `below_min_level` |
+| Its rule isn't denied | `rules.deny` | none | `rule_denied` |
+| Its rule is allowed, or in a campaign | `rules.allow` | none, so **nothing is allowed** | `rule_not_allowed` |
+| Its file isn't denied | `paths.deny` | `.github/workflows/**` | `path_denied` |
+
+What's left is grouped: one batch per rule, or per file with `group_by` ([Batches](#batches)). Issues mode keeps one issue per batch, the most severe first, up to `publish.issues.max_open`. The rest open as earlier ones close ([Issues](#issues)).
+
+!!! tip "Levels and code scanning's severities"
+    sarifix reads each finding's SARIF `level`: `error`, then `warning`, then `note`, then `none`. Code scanning shows the same levels as Error, Warning and Note. For security rules it shows a severity instead (Critical, High, Medium or Low), which comes from the rule, not the level. Trivy's Medium "Restrict container images to trusted registries" is a `warning`. `min_level: note` keeps everything except `none`. `min_level: error` keeps errors only, which can be nothing at all.
+
+## Why isn't a finding an issue?
+
+Run `plan` on the same SARIF with `--details`. It lists every skipped finding under its reason. For example, a repo whose code scanning showed 35 open alerts and no issues:
+
+```console
+$ sarifix scan --log-level warn
+✓ trivy 21 findings → sarif/trivy.sarif
+✓ semgrep 14 findings → sarif/semgrep.sarif
+$ sarifix plan --sarif 'sarif/*.sarif' --details
+35 findings  0 batched in 0 batches  0 deferred  35 skipped
+
+Skipped
+  below_min_level 35
+     semgrep/go.lang.security.audit.crypto.math_random.math-random-used internal/postmark/client.go:12 (warning < error)
+     …
+```
+
+Every finding was a warning or a note under `min_level: error`. Narrow the list to one rule with `--rule 'semgrep/*math*'`. The fix for each reason:
+
+| Reason | What to change |
+| --- | --- |
+| `unrouted` | Add the tool's SARIF name (`tool.driver.name`, shown in the reason) to a scanner's `match`. |
+| `no_location` | Nothing: a finding with no file in the repo can't be fixed by editing code. |
+| `below_min_level` | Lower `rules.min_level`. |
+| `rule_denied` | Remove the matching glob from `rules.deny`. |
+| `rule_not_allowed` | Add a glob for the rule to `rules.allow`, such as `semgrep/*`. |
+| `path_denied` | Remove the matching glob from `paths.deny`. `.github/workflows/**` can't be removed. |
+
+`plan` splits the batches into the ones a fixing run would take (`limits.batches_per_run`, default 5) and the rest, which it calls deferred. Issues mode uses all of them, deferred included. If `plan` batches a finding but there's no issue for it, more batches exist than `publish.issues.max_open`. The job summary of the action's run lists every issue it opened, closed or queued. For an [imported scanner](#imported-scanners), check that the run could read code scanning alerts. A warning in the log says when it couldn't.
+
+## What each command uses
+
+| | `scan` | `check` and the Stop hook | `plan`, `fix` and the action's issues mode |
+| --- | --- | --- | --- |
+| `scanners` | runs them | runs them, before and after the change | reads their SARIF |
+| `rules.min_level`, `rules.deny`, `paths.deny` | | yes | yes |
+| `rules.allow` | | no: feedback on a change covers every rule that isn't denied. `--allowed-only` applies it | yes |
+| `limits.group_by` | | | yes |
+| `publish.issues` | | | issues mode |
+
+`rules.allow` is the fixing policy: what sarifix may fix, or hand to an agent, unasked. Your own changes get feedback on everything that isn't denied.
 
 ## Scanners
 
@@ -147,6 +226,19 @@ scanners:
 ```
 
 Changing `group_by` changes batch IDs, so issues mode closes the old issues and opens the regrouped ones. See [ADR 8](adr/0008-group-by.md).
+
+## Issues
+
+`sarifix fix --mode issues`, and the GitHub Action on pushes and schedules, keep one GitHub issue per batch. The settings live under `publish.issues`:
+
+| Setting | Default | What it does |
+| --- | --- | --- |
+| `label` | `sarifix` | Put on every issue sarifix opens. sarifix never touches an issue without it. |
+| `max_open` | `10` | How many issues are open at once, the most severe batches first. When one closes, the next batch gets an issue. Raise it to see the whole backlog at once. |
+| `queue` | `0` | How many issues to keep labeled `queue_label`, which hands them to an agent queue. Above 0, this starts paid agent runs. The action's `queue` input overrides it. |
+| `queue_label` | `agent-ready` | The label that hands an issue to an agent. |
+
+An issue closes when the next scan no longer reports its batch. That only happens if its scanner's SARIF was read in that run, so a scanner that fails doesn't make its issues look fixed. [Turn findings into issues Claude works through](tutorials/claude-queue.md) covers the agent side.
 
 ## Layering with an org config
 
