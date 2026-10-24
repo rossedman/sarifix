@@ -28,13 +28,14 @@ SARIF-emitting tools sarifix can run and route findings to.
 | --- | --- | --- | --- |
 | `scanners[].name` | string | required | Unique ID, used in rule keys and branch names. |
 | `scanners[].match` | list of string | `[name]` | SARIF tool.driver.name values routed to this scanner (case-insensitive). |
-| `scanners[].command` | list of string | required | argv to run, no shell. Placeholders are expanded per element. |
+| `scanners[].command` | list of string | none | argv to run, no shell. Placeholders are expanded per element. Leave it out for an imported scanner, whose findings come from code scanning (sarifix alerts export) instead, such as CodeQL. |
 | `scanners[].output` | string | `{out}` | Where the SARIF lands, for tools that choose their own file name. |
 | `scanners[].workdir` | string | `{repo}` | Working directory for the command. |
 | `scanners[].env` | map of string | none | Extra environment variables. |
 | `scanners[].scope` | string | `dir` | Rescan scope during verify: changed, dir or repo. |
 | `scanners[].timeout` | duration | `5m` | Time limit per invocation. |
 | `scanners[].offline` | bool | `false` | Run verify rescans with the network disabled. |
+| `scanners[].group_by` | string | none | Overrides limits.group_by for this scanner's findings: rule, file or auto. |
 
 ## `rules`
 

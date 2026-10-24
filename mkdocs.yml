@@ -115,6 +115,8 @@ nav:
           - sarifix plan: reference/commands/sarifix_plan.md
           - sarifix fix: reference/commands/sarifix_fix.md
           - sarifix check: reference/commands/sarifix_check.md
+          - sarifix alerts: reference/commands/sarifix_alerts.md
+          - sarifix alerts export: reference/commands/sarifix_alerts_export.md
           - sarifix config: reference/commands/sarifix_config.md
           - sarifix config validate: reference/commands/sarifix_config_validate.md
           - sarifix version: reference/commands/sarifix_version.md
@@ -132,6 +134,7 @@ nav:
           - Feedback hook for Claude Code: adr/0006-feedback-hook.md
           - Issues mode: adr/0007-issues-mode.md
           - Grouping by file: adr/0008-group-by.md
+          - Imported scanners: adr/0009-imported-scanners.md
 
 extra:
   social:

@@ -91,7 +91,7 @@ steps:
   - uses: rossedman/sarifix@v0.2.3
 ```
 
-See the [GitHub Action](https://rossedman.io/sarifix/action/) for modes and inputs, and [Turn findings into issues Claude works through](https://rossedman.io/sarifix/tutorials/claude-queue/) to hand the issues to Claude.
+Alerts already in code scanning from tools sarifix doesn't run, such as CodeQL, become issues too: list the tool as a scanner with no `command` ([imported scanners](https://rossedman.io/sarifix/configuration/#imported-scanners)). See the [GitHub Action](https://rossedman.io/sarifix/action/) for modes and inputs, and [Turn findings into issues Claude works through](https://rossedman.io/sarifix/tutorials/claude-queue/) to hand the issues to Claude.
 
 SARIF files are build output: regenerate them on every run and keep them out of git (`sarif/` in `.gitignore`). In CI, upload them to code scanning or keep them as an artifact. See [Where SARIF files live](https://rossedman.io/sarifix/guides/sarif-files/).
 

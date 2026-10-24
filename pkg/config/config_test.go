@@ -19,8 +19,11 @@ func TestLoadExample(t *testing.T) {
 	if err := l.Validate(ValidateOptions{Strict: true}); err != nil {
 		t.Fatal(err)
 	}
-	if len(l.Scanners) != 4 {
-		t.Fatalf("got %d scanners", len(l.Scanners))
+	if len(l.Scanners) != 5 || len(l.Runnable()) != 4 {
+		t.Fatalf("got %d scanners, %d runnable", len(l.Scanners), len(l.Runnable()))
+	}
+	if cq, _ := l.Scanner("codeql"); !cq.Imported() || l.GroupByScanner()["trivy"] != GroupByFile {
+		t.Errorf("codeql %+v, overrides %v", cq, l.GroupByScanner())
 	}
 	gl, _ := l.Scanner("golangci-lint")
 	if !slices.Equal(gl.Match, []string{"golangci-lint"}) || gl.Output != "{out}" || gl.Timeout.Std() != 5*time.Minute {

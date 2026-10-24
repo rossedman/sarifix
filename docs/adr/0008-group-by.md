@@ -21,6 +21,8 @@ Campaigns still come first under every setting. A file batch's key is `<scanner>
 
 An issue for a file batch lists its rules, and its **Done when** command passes one `--rule` per rule. Campaign issues now select with `--campaign`. Before, they passed the campaign ID to `--rule`, which matched nothing.
 
+A scanner's own `group_by` overrides `limits.group_by` for its findings. postmarkd's Trivy reports the same eight checks in two Kubernetes manifests, so `auto` merges nothing and `file` for every scanner would split Semgrep's multi-file rules: Trivy by file and Semgrep by rule turn its 35 findings into 11 batches.
+
 ## Consequences
 
 - Turning on `file` or `auto` changes batch IDs. Issues mode closes the old per-rule issues and opens the merged ones.
