@@ -91,6 +91,11 @@ func (v *validator) scanners() {
 		for k, val := range s.Env {
 			v.placeholders(p+".env."+k, val)
 		}
+		switch s.GroupBy {
+		case "", GroupByRule, GroupByFile, GroupByAuto:
+		default:
+			v.add(p+".group_by", "must be rule, file or auto, got %q", s.GroupBy)
+		}
 		switch s.Scope {
 		case ScopeChanged, ScopeDir, ScopeRepo:
 		default:

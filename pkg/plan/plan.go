@@ -69,7 +69,7 @@ func Build(cfg *config.Config, fs []finding.Finding, opts Options) *Plan {
 		}
 	}
 	items := policy.New(cfg, policy.Options{Rules: opts.Rules, Campaign: opts.Campaign, Baseline: base}).Apply(fs)
-	p := &Plan{Batches: group.Batches(items, cfg.Limits), BranchPrefix: cfg.Publish.PR.BranchPrefix}
+	p := &Plan{Batches: group.Batches(items, cfg.Limits, cfg.GroupByScanner()), BranchPrefix: cfg.Publish.PR.BranchPrefix}
 
 	type where struct {
 		batch, branch, status string
