@@ -46,6 +46,7 @@ type Scanner struct {
 	Scope   string            `yaml:"scope" json:"scope" doc:"Rescan scope during verify: changed, dir or repo." default:"dir"`
 	Timeout Duration          `yaml:"timeout" json:"timeout" doc:"Time limit per invocation." default:"5m"`
 	Offline bool              `yaml:"offline" json:"offline" doc:"Run verify rescans with the network disabled." default:"false"`
+	GroupBy string            `yaml:"group_by" json:"group_by,omitempty" doc:"Overrides limits.group_by for this scanner's findings: rule, file or auto."`
 }
 
 // Rules selects which findings are fixable, by "<scanner>/<ruleId>" glob.
@@ -187,6 +188,18 @@ func (c *Config) Runnable() []Scanner {
 	for _, s := range c.Scanners {
 		if !s.Imported() {
 			out = append(out, s)
+		}
+	}
+	return out
+}
+
+// GroupByScanner maps each scanner that overrides limits.group_by to its
+// own setting.
+func (c *Config) GroupByScanner() map[string]string {
+	out := map[string]string{}
+	for _, s := range c.Scanners {
+		if s.GroupBy != "" {
+			out[s.Name] = s.GroupBy
 		}
 	}
 	return out

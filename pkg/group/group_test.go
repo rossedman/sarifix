@@ -47,7 +47,7 @@ func TestBatchesGroupOrderAndCap(t *testing.T) {
 		item("trivy", "N", "note", "a.tf", 4),
 		camp, skipped,
 	}
-	r := Batches(items, limits(10, 25, 3))
+	r := Batches(items, limits(10, 25, 3), nil)
 	// error before warning before note; ties: more findings first, then key.
 	if got := ids(r.Run); !slices.Equal(got, []string{"checkov/C", "trivy/A", "trivy/B"}) {
 		t.Errorf("run = %v", got)
@@ -63,10 +63,10 @@ func TestBatchesGroupOrderAndCap(t *testing.T) {
 	if c.Campaign != "base-v4" || c.RuleID != "" || c.Branch("sarifix") != "sarifix/campaign/base-v4" {
 		t.Errorf("campaign batch = %+v", c)
 	}
-	if r := Batches(items, limits(10, 25, 0)); len(r.Run) != 0 || len(r.Deferred) != 5 {
+	if r := Batches(items, limits(10, 25, 0), nil); len(r.Run) != 0 || len(r.Deferred) != 5 {
 		t.Errorf("zero cap: %d run, %d deferred", len(r.Run), len(r.Deferred))
 	}
-	if r := Batches(nil, limits(1, 1, 1)); len(r.Run) != 0 || len(r.Deferred) != 0 {
+	if r := Batches(nil, limits(1, 1, 1), nil); len(r.Run) != 0 || len(r.Deferred) != 0 {
 		t.Error("empty input made batches")
 	}
 }
@@ -91,13 +91,13 @@ func TestBatchesGroupBy(t *testing.T) {
 	all := func(r Result) []string { return append(ids(r.Run), ids(r.Deferred)...) }
 	lim := limits(10, 25, 10)
 
-	if got := all(Batches(items, lim)); !slices.Equal(got,
+	if got := all(Batches(items, lim, nil)); !slices.Equal(got,
 		[]string{"base-v4", "semgrep/tls", "trivy/A", "semgrep/xss", "trivy/D", "trivy/B", "trivy/C"}) {
 		t.Errorf("rule = %v", got)
 	}
 
 	lim.GroupBy = config.GroupByAuto
-	r := Batches(items, lim)
+	r := Batches(items, lim, nil)
 	// k8s.yaml's single-file rules merge; other.yaml and a.go have one each.
 	if got := all(r); !slices.Equal(got, []string{"base-v4", "trivy:k8s.yaml", "semgrep/tls", "semgrep/xss", "trivy/D"}) {
 		t.Errorf("auto = %v", got)
@@ -115,13 +115,26 @@ func TestBatchesGroupBy(t *testing.T) {
 	}
 
 	lim.GroupBy = config.GroupByFile
-	if got := all(Batches(items, lim)); !slices.Equal(got,
+	if got := all(Batches(items, lim, nil)); !slices.Equal(got,
 		[]string{"base-v4", "trivy:k8s.yaml", "semgrep:a.go", "semgrep:b.go", "trivy:other.yaml"}) {
 		t.Errorf("file = %v", got)
 	}
+	// A scanner's own group_by wins: trivy by file, semgrep by rule.
+	lim.GroupBy = config.GroupByRule
+	if got := all(Batches(items, lim, map[string]string{"trivy": config.GroupByFile})); !slices.Equal(got,
+		[]string{"base-v4", "trivy:k8s.yaml", "semgrep/tls", "semgrep/xss", "trivy:other.yaml"}) {
+		t.Errorf("trivy by file = %v", got)
+	}
+	lim.GroupBy = config.GroupByAuto
+	if got := all(Batches(items, lim, map[string]string{"trivy": config.GroupByRule})); !slices.Equal(got,
+		[]string{"base-v4", "semgrep/tls", "trivy/A", "semgrep/xss", "trivy/D", "trivy/B", "trivy/C"}) {
+		t.Errorf("trivy by rule under auto = %v", got)
+	}
+	lim.GroupBy = config.GroupByFile
+
 	// A file batch over findings_per_batch splits into parts.
 	lim.FindingsPerBatch = 3
-	if got := ids(Batches(items[:4], lim).Run); !slices.Equal(got, []string{"trivy:k8s.yaml", "trivy:k8s.yaml#2"}) {
+	if got := ids(Batches(items[:4], lim, nil).Run); !slices.Equal(got, []string{"trivy:k8s.yaml", "trivy:k8s.yaml#2"}) {
 		t.Errorf("split file = %v", got)
 	}
 }
@@ -160,7 +173,7 @@ func TestSplit(t *testing.T) {
 		}
 	}
 	// Parts of one key get numbered IDs and branches.
-	r := Batches(items, limits(1, 25, 5))
+	r := Batches(items, limits(1, 25, 5), nil)
 	if got := ids(r.Run); !slices.Equal(got, []string{"t/R", "t/R#2", "t/R#3"}) {
 		t.Errorf("ids = %v", got)
 	}
@@ -237,6 +250,6 @@ func BenchmarkBatches(b *testing.B) {
 	lim := limits(10, 25, 5)
 	b.ReportAllocs()
 	for b.Loop() {
-		Batches(items, lim)
+		Batches(items, lim, nil)
 	}
 }

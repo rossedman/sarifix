@@ -200,6 +200,7 @@ scanners:
   - name: "bad name"
     command: [x]
     scope: everywhere
+    group_by: dir
     match: [""]
 rules:
   allow: [nokey, "a/["]
@@ -235,6 +236,7 @@ publish:
 			"x.yaml:2: version: must be 1, got 2",
 			`scanners[0].name: "bad name" may only contain`,
 			`scanners[0].scope: must be changed, dir or repo, got "everywhere"`,
+			`scanners[0].group_by: must be rule, file or auto, got "dir"`,
 			"scanners[0].match[0]: must not be empty",
 			`rules.allow[0]: "nokey" must look like`,
 			`rules.allow[1]: bad glob`,
@@ -246,7 +248,7 @@ publish:
 			"campaigns[0].rules: must list",
 			`campaigns[2].id: duplicate campaign id "c"`,
 			`campaigns[1].scanner: unknown scanner "x"`,
-			`x.yaml:21: campaigns[2].scanner: unknown scanner "x"`,
+			`x.yaml:22: campaigns[2].scanner: unknown scanner "x"`,
 			`limits.group_by: must be rule, file or auto, got "folder"`,
 			"limits.files_per_batch: must be at least 1",
 			"limits.retries: must not be negative",

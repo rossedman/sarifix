@@ -81,8 +81,15 @@ type groupT struct {
 }
 
 // groupItems groups fixable items by campaign, then by rule or by file as
-// groupBy says, keeping the order in which keys first appear.
-func groupItems(items []policy.Item, groupBy string) []*groupT {
+// their scanner's mode (overrides, else groupBy) says, keeping the order in
+// which keys first appear.
+func groupItems(items []policy.Item, groupBy string, overrides map[string]string) []*groupT {
+	mode := func(scanner string) string {
+		if m, ok := overrides[scanner]; ok {
+			return m
+		}
+		return groupBy
+	}
 	var order []*groupT
 	groups := map[string]*groupT{}
 	add := func(g *groupT, it policy.Item) {
@@ -102,20 +109,17 @@ func groupItems(items []policy.Item, groupBy string) []*groupT {
 		case it.Skip != "":
 		case it.Campaign != "":
 			add(&groupT{key: it.Campaign, scanner: it.Scanner, campaign: it.Campaign}, it)
-		case groupBy == config.GroupByFile:
+		case mode(it.Scanner) == config.GroupByFile:
 			add(byFile(it), it)
 		default:
 			add(&groupT{key: it.Key(), scanner: it.Scanner, rule: it.RuleID}, it)
 		}
 	}
-	if groupBy != config.GroupByAuto {
-		return order
-	}
 	// auto: rules found in only one file move to that file's batch, when at
 	// least two of them share it.
 	single := map[string][]*groupT{}
 	for _, g := range order {
-		if g.rule != "" && sameFile(g.items) {
+		if g.rule != "" && mode(g.scanner) == config.GroupByAuto && sameFile(g.items) {
 			k := byFile(g.items[0]).key
 			single[k] = append(single[k], g)
 		}
@@ -123,7 +127,7 @@ func groupItems(items []policy.Item, groupBy string) []*groupT {
 	var out []*groupT
 	merged := map[string]*groupT{}
 	for _, g := range order {
-		if g.rule == "" || !sameFile(g.items) || len(single[byFile(g.items[0]).key]) < 2 {
+		if g.rule == "" || mode(g.scanner) != config.GroupByAuto || !sameFile(g.items) || len(single[byFile(g.items[0]).key]) < 2 {
 			out = append(out, g)
 			continue
 		}
@@ -150,13 +154,13 @@ func sameFile(items []policy.Item) bool {
 }
 
 // Batches groups fixable items by campaign, then by rule or file as
-// limits.group_by says, splits groups to fit files_per_batch and
+// limits.group_by says (or overrides, by scanner name), splits groups to fit files_per_batch and
 // findings_per_batch, orders them by the group's severity then size
 // (keeping a group's parts together and in order), and caps the run at
 // batches_per_run.
-func Batches(items []policy.Item, lim config.Limits) Result {
+func Batches(items []policy.Item, lim config.Limits, overrides map[string]string) Result {
 	var all []Batch
-	for _, g := range groupItems(items, lim.GroupBy) {
+	for _, g := range groupItems(items, lim.GroupBy, overrides) {
 		for i, part := range split(g.items, lim.FilesPerBatch, lim.FindingsPerBatch) {
 			b := Batch{Key: g.key, Scanner: g.scanner, RuleID: g.rule, Campaign: g.campaign, File: g.file, Part: i + 1, Findings: part}
 			b.Files, b.Level, b.Rules = summarize(part)
