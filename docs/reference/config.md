@@ -15,7 +15,7 @@ Every key sarifix reads from `sarifix.yaml`, generated from the config schema. U
 | `rules` | object | none | Which rules may be fixed. |
 | `paths` | object | none | Which files may be changed. |
 | `campaigns` | list of object | none | Named migrations tracked across repos. |
-| `limits` | object | none | Batch sizes, retries and time limits. |
+| `limits` | object | none | Batch grouping and sizes, retries and time limits. |
 | `verify` | object | none | How a fix is proven before it is published. |
 | `agent` | object | none | The AI agent that writes fixes. |
 | `publish` | object | none | How verified fixes are published. |
@@ -68,10 +68,11 @@ Named migrations tracked across repos.
 
 ## `limits`
 
-Batch sizes, retries and time limits.
+Batch grouping and sizes, retries and time limits.
 
 | Key | Type | Default | Description |
 | --- | --- | --- | --- |
+| `limits.group_by` | string | `rule` | How findings become batches: rule (one per rule), file (one per scanner and file) or auto (one per rule, except that rules a scanner reports in only one file share a batch per file). |
 | `limits.files_per_batch` | int | `10` | Most files one batch may touch. |
 | `limits.findings_per_batch` | int | `25` | Most findings in one batch. |
 | `limits.batches_per_run` | int | `5` | Most batches one run attempts. |

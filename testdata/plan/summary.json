@@ -17,6 +17,9 @@
       "branch": "sarifix/checkov/ckv_aws_144",
       "scanner": "checkov",
       "ruleId": "CKV_AWS_144",
+      "rules": [
+        "checkov/CKV_AWS_144"
+      ],
       "level": "error",
       "findings": 1,
       "files": [
@@ -29,6 +32,9 @@
       "branch": "sarifix/checkov/ckv_aws_145",
       "scanner": "checkov",
       "ruleId": "CKV_AWS_145",
+      "rules": [
+        "checkov/CKV_AWS_145"
+      ],
       "level": "error",
       "findings": 1,
       "files": [
@@ -41,6 +47,9 @@
       "branch": "sarifix/checkov/ckv_aws_21",
       "scanner": "checkov",
       "ruleId": "CKV_AWS_21",
+      "rules": [
+        "checkov/CKV_AWS_21"
+      ],
       "level": "error",
       "findings": 1,
       "files": [
@@ -53,6 +62,9 @@
       "branch": "sarifix/checkov/ckv_aws_23",
       "scanner": "checkov",
       "ruleId": "CKV_AWS_23",
+      "rules": [
+        "checkov/CKV_AWS_23"
+      ],
       "level": "error",
       "findings": 1,
       "files": [
@@ -67,6 +79,9 @@
       "branch": "sarifix/checkov/ckv_aws_24",
       "scanner": "checkov",
       "ruleId": "CKV_AWS_24",
+      "rules": [
+        "checkov/CKV_AWS_24"
+      ],
       "level": "error",
       "findings": 1,
       "files": [
@@ -79,6 +94,9 @@
       "branch": "sarifix/trivy/aws-0086",
       "scanner": "trivy",
       "ruleId": "AWS-0086",
+      "rules": [
+        "trivy/AWS-0086"
+      ],
       "level": "error",
       "findings": 1,
       "files": [
@@ -91,6 +109,9 @@
       "branch": "sarifix/trivy/aws-0087",
       "scanner": "trivy",
       "ruleId": "AWS-0087",
+      "rules": [
+        "trivy/AWS-0087"
+      ],
       "level": "error",
       "findings": 1,
       "files": [
@@ -103,6 +124,9 @@
       "branch": "sarifix/trivy/aws-0091",
       "scanner": "trivy",
       "ruleId": "AWS-0091",
+      "rules": [
+        "trivy/AWS-0091"
+      ],
       "level": "error",
       "findings": 1,
       "files": [
@@ -115,6 +139,9 @@
       "branch": "sarifix/trivy/aws-0093",
       "scanner": "trivy",
       "ruleId": "AWS-0093",
+      "rules": [
+        "trivy/AWS-0093"
+      ],
       "level": "error",
       "findings": 1,
       "files": [
@@ -127,6 +154,9 @@
       "branch": "sarifix/trivy/aws-0107",
       "scanner": "trivy",
       "ruleId": "AWS-0107",
+      "rules": [
+        "trivy/AWS-0107"
+      ],
       "level": "error",
       "findings": 1,
       "files": [
@@ -139,6 +169,9 @@
       "branch": "sarifix/trivy/aws-0132",
       "scanner": "trivy",
       "ruleId": "AWS-0132",
+      "rules": [
+        "trivy/AWS-0132"
+      ],
       "level": "error",
       "findings": 1,
       "files": [
@@ -151,6 +184,9 @@
       "branch": "sarifix/trivy/ds-0002",
       "scanner": "trivy",
       "ruleId": "DS-0002",
+      "rules": [
+        "trivy/DS-0002"
+      ],
       "level": "error",
       "findings": 1,
       "files": [
@@ -163,6 +199,9 @@
       "branch": "sarifix/trivy/ds-0025",
       "scanner": "trivy",
       "ruleId": "DS-0025",
+      "rules": [
+        "trivy/DS-0025"
+      ],
       "level": "error",
       "findings": 1,
       "files": [
@@ -175,6 +214,9 @@
       "branch": "sarifix/campaign/base-image-2026q4",
       "scanner": "image-migrate",
       "campaign": "base-image-2026q4",
+      "rules": [
+        "image-migrate/DEPRECATED_BASE"
+      ],
       "level": "warning",
       "findings": 1,
       "files": [
@@ -187,6 +229,9 @@
       "branch": "sarifix/trivy/aws-0090",
       "scanner": "trivy",
       "ruleId": "AWS-0090",
+      "rules": [
+        "trivy/AWS-0090"
+      ],
       "level": "warning",
       "findings": 1,
       "files": [

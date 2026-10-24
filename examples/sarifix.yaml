@@ -46,6 +46,7 @@ campaigns:
     labels: [migration, platform]
 
 limits:
+  group_by: rule # or file, or auto: rules found in one file share its batch
   files_per_batch: 10
   findings_per_batch: 25
   batches_per_run: 5

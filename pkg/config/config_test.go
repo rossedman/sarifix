@@ -217,6 +217,7 @@ campaigns:
     scanner: x
     rules: [x/a]
 limits:
+  group_by: folder
   files_per_batch: 0
   retries: -1
   agent_timeout: 0s
@@ -246,6 +247,7 @@ publish:
 			`campaigns[2].id: duplicate campaign id "c"`,
 			`campaigns[1].scanner: unknown scanner "x"`,
 			`x.yaml:21: campaigns[2].scanner: unknown scanner "x"`,
+			`limits.group_by: must be rule, file or auto, got "folder"`,
 			"limits.files_per_batch: must be at least 1",
 			"limits.retries: must not be negative",
 			"limits.agent_timeout: must be positive",

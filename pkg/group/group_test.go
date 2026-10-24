@@ -71,6 +71,61 @@ func TestBatchesGroupOrderAndCap(t *testing.T) {
 	}
 }
 
+func TestBatchesGroupBy(t *testing.T) {
+	t.Parallel()
+	camp := item("trivy", "OLD", "error", "k8s.yaml", 9)
+	camp.Campaign = "base-v4"
+	items := []policy.Item{
+		// Three trivy rules only in k8s.yaml, one only in other.yaml.
+		item("trivy", "A", "warning", "k8s.yaml", 1),
+		item("trivy", "B", "note", "k8s.yaml", 2),
+		item("trivy", "C", "note", "k8s.yaml", 3),
+		item("trivy", "A", "warning", "k8s.yaml", 4),
+		item("trivy", "D", "warning", "other.yaml", 1),
+		// A semgrep rule across two files, and one only in a.go.
+		item("semgrep", "tls", "warning", "a.go", 1),
+		item("semgrep", "tls", "warning", "b.go", 1),
+		item("semgrep", "xss", "warning", "a.go", 2),
+		camp,
+	}
+	all := func(r Result) []string { return append(ids(r.Run), ids(r.Deferred)...) }
+	lim := limits(10, 25, 10)
+
+	if got := all(Batches(items, lim)); !slices.Equal(got,
+		[]string{"base-v4", "semgrep/tls", "trivy/A", "semgrep/xss", "trivy/D", "trivy/B", "trivy/C"}) {
+		t.Errorf("rule = %v", got)
+	}
+
+	lim.GroupBy = config.GroupByAuto
+	r := Batches(items, lim)
+	// k8s.yaml's single-file rules merge; other.yaml and a.go have one each.
+	if got := all(r); !slices.Equal(got, []string{"base-v4", "trivy:k8s.yaml", "semgrep/tls", "semgrep/xss", "trivy/D"}) {
+		t.Errorf("auto = %v", got)
+	}
+	f := r.Run[1]
+	if f.File != "k8s.yaml" || f.RuleID != "" || f.Level != "warning" || len(f.Findings) != 4 ||
+		!slices.Equal(f.Rules, []string{"trivy/A", "trivy/B", "trivy/C"}) || !slices.Equal(f.Files, []string{"k8s.yaml"}) {
+		t.Errorf("file batch = %+v", f)
+	}
+	if got := f.Branch("sarifix"); got != "sarifix/file/trivy/k8s.yaml" {
+		t.Errorf("branch = %q", got)
+	}
+	if b := r.Run[2]; !slices.Equal(b.Rules, []string{"semgrep/tls"}) {
+		t.Errorf("rule batch rules = %v", b.Rules)
+	}
+
+	lim.GroupBy = config.GroupByFile
+	if got := all(Batches(items, lim)); !slices.Equal(got,
+		[]string{"base-v4", "trivy:k8s.yaml", "semgrep:a.go", "semgrep:b.go", "trivy:other.yaml"}) {
+		t.Errorf("file = %v", got)
+	}
+	// A file batch over findings_per_batch splits into parts.
+	lim.FindingsPerBatch = 3
+	if got := ids(Batches(items[:4], lim).Run); !slices.Equal(got, []string{"trivy:k8s.yaml", "trivy:k8s.yaml#2"}) {
+		t.Errorf("split file = %v", got)
+	}
+}
+
 func TestSplit(t *testing.T) {
 	t.Parallel()
 	var items []policy.Item

@@ -54,6 +54,8 @@ publish:
     queue_label: agent-ready
 ```
 
+A batch is one rule by default. When a scanner reports many rules against one file, such as Trivy on a Kubernetes manifest, set `limits.group_by: auto` so those rules share one issue per file instead of one each. See [Batches](../configuration.md#batches).
+
 Run it with `--dry-run` to see what it would do without changing anything. It prints one line per change (`✓ opened #12 trivy/AWS-0086`), and `--json` gives the same as a list of actions.
 
 Each issue follows task-queue's agent-ready format. Here is one the workflow's steps created on a test repository:
